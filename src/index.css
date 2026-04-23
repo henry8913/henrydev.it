@@ -40,6 +40,12 @@ body {
   background: #0f0f0f;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 #root {
   width: 100%;
   min-height: 100vh;

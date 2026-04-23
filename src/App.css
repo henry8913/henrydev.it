@@ -3134,3 +3134,112 @@ button.status-item:hover {
     border-top: 1px solid #2f2f2f;
   }
 }
+
+/* ------------------------------------------------------------
+   Mobile optimization (320–1024px)
+   ------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  /* The macOS-like menu bar becomes too wide on smaller screens */
+  .macmenu {
+    display: none;
+  }
+
+  .macbar-left {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .macbar-right {
+    gap: 6px;
+  }
+
+  .macbar-clock {
+    display: none;
+  }
+
+  /* Let the address bar shrink without forcing overflow */
+  .addressbar {
+    min-width: 0;
+    width: min(520px, 52vw);
+  }
+}
+
+@media (max-width: 600px) {
+  /* Reduce page paddings on phones */
+  .home,
+  .about-page,
+  .skills-page,
+  .resume-page,
+  .portfolio-page,
+  .certs-page,
+  .blog-page,
+  .contact-page {
+    padding: 16px 14px 14px;
+  }
+
+  /* Reduce large headings for small screens */
+  .about-title,
+  .skills-title,
+  .resume-title,
+  .portfolio-title,
+  .certs-title,
+  .blog-title,
+  .contact-title {
+    font-size: 38px;
+    line-height: 1.05;
+  }
+
+  .portfolio-controls {
+    gap: 8px;
+  }
+
+  .home-actions {
+    flex-wrap: wrap;
+  }
+
+  .home-contact {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  /* Compact title bar */
+  .titlebar {
+    gap: 8px;
+    padding: 0 8px;
+  }
+
+  .addressbar {
+    width: 100%;
+  }
+
+  .addressbar-inner {
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-first,
+  .home-last {
+    font-size: 38px;
+  }
+
+  .about-title,
+  .skills-title,
+  .resume-title,
+  .portfolio-title,
+  .certs-title,
+  .blog-title,
+  .contact-title {
+    font-size: 32px;
+  }
+
+  .home-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-box + .stat-box {
+    border-left: none;
+    border-top: 1px solid #2f2f2f;
+  }
+}
