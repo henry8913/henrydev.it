@@ -1,0 +1,3995 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import './App.css'
+
+type FileId =
+  | 'home.tsx'
+  | 'about.html'
+  | 'skills.json'
+  | 'resume.ts'
+  | 'portfolio.js'
+  | 'certifications.js'
+  | 'contact.css'
+  | 'blog.html'
+  | 'README.md'
+  | 'resume.pdf'
+
+type FileEntry = {
+  id: FileId
+  label: string
+  kind: 'file'
+  ext: 'tsx' | 'html' | 'js' | 'json' | 'ts' | 'css' | 'md' | 'pdf'
+}
+
+type FolderEntry = {
+  id: 'PORTFOLIO'
+  label: string
+  kind: 'folder'
+  children: FileEntry[]
+}
+
+type PortfolioCategory = 'Web Development' | 'Applications' | 'Web Design'
+type PortfolioFilter = 'All' | PortfolioCategory
+type PortfolioProject = {
+  title: string
+  category: PortfolioCategory
+  description: string
+  cover?: string
+  github?: string
+  live?: string
+}
+type PortfolioContent = {
+  title: string
+  metaLine: string
+  subtitle: string
+  filters: readonly PortfolioFilter[]
+  projects: readonly PortfolioProject[]
+}
+
+type CertificationItem = {
+  title: string
+  category: string
+  year: string
+  description: string
+  cover: string
+}
+
+type BlogPostItem = {
+  cover: string
+  category: string
+  dateISO: string
+  dateLabel: string
+  title: string
+  excerpt: string
+}
+
+type ChatRole = 'user' | 'assistant'
+type ChatMessage = {
+  id: string
+  role: ChatRole
+  content: string
+}
+
+type ChatThread = {
+  id: string
+  title: string
+  messages: ChatMessage[]
+  createdAt: number
+  updatedAt: number
+}
+
+type TerminalEntryKind = 'cmd' | 'out' | 'err'
+type TerminalEntry = {
+  id: string
+  kind: TerminalEntryKind
+  text: string
+  cwd?: string
+}
+
+const FILE_TREE: FolderEntry = {
+  id: 'PORTFOLIO',
+  label: 'HENRYDEV.IT',
+  kind: 'folder',
+  children: [
+    { id: 'home.tsx', label: 'home.tsx', kind: 'file', ext: 'tsx' },
+    { id: 'about.html', label: 'about.html', kind: 'file', ext: 'html' },
+    { id: 'skills.json', label: 'skills.json', kind: 'file', ext: 'json' },
+    { id: 'resume.ts', label: 'resume.ts', kind: 'file', ext: 'ts' },
+    { id: 'portfolio.js', label: 'portfolio.js', kind: 'file', ext: 'js' },
+    { id: 'certifications.js', label: 'certifications.js', kind: 'file', ext: 'js' },
+    { id: 'contact.css', label: 'contact.css', kind: 'file', ext: 'css' },
+    { id: 'blog.html', label: 'blog.html', kind: 'file', ext: 'html' },
+    { id: 'resume.pdf', label: 'resume.pdf', kind: 'file', ext: 'pdf' },
+    { id: 'README.md', label: 'README.md', kind: 'file', ext: 'md' },
+  ],
+}
+
+const CONTENT = {
+  siteName: 'henrydev.it',
+  profile: {
+    firstName: 'Henry',
+    lastName: 'Grecchi',
+    roles: ['Full Stack Developer', '.NET', 'MERN'],
+    companyBadge: {
+      label: '@HenryAI',
+    },
+    tagline:
+      'Software Developer in contesto internazionale, con focus su .NET e stack MERN.',
+    stats: [
+      { value: '1+', label: 'YEARS' },
+      { value: '50+', label: 'PROJECTS' },
+      { value: '∞', label: 'CURIOSITY' },
+      { value: '↑', label: 'ALWAYS LEARNING' },
+    ],
+  },
+  home: {
+    heading: '',
+    paragraphs: [
+      'Buongiorno, mi chiamo Henry Grecchi e sono un Software Developer attualmente inserito in un contesto aziendale internazionale.',
+      'La mia esperienza professionale odierna si focalizza sullo sviluppo di soluzioni enterprise in ambiente Microsoft .NET. Parallelamente, possiedo una specializzazione nello stack MERN, che mi permette di progettare applicazioni web moderne, responsive e scalabili.',
+      "Ciò che mi distingue è l'unione tra queste basi tecniche e oltre dieci anni di esperienza a contatto con il pubblico. Questa maturità mi ha permesso di affinare competenze trasversali fondamentali orientate al risultato.",
+    ],
+    mainSkills: [
+      {
+        title: 'Backend Development (.NET & Node)',
+        description:
+          "Gestione dell'intero ciclo di vita del software: dall'integrazione di API REST alla gestione di database SQL Server (C#, Visual Studio) e MongoDB (Node.js, Express).",
+      },
+      {
+        title: 'Frontend Development (MERN)',
+        description:
+          'Progettazione di interfacce web moderne, responsive e scalabili sfruttando React, Bootstrap e JavaScript (ES6+).',
+      },
+    ],
+    featuredProjects: [
+      {
+        title: 'RMI Made in Italy',
+        description:
+          "Piattaforma completa dedicata al restauro, personalizzazione e manutenzione di auto d'epoca di lusso. Include front-end React, back-end Node.js e assistente AI.",
+      },
+      {
+        title: 'Evergreen Resort',
+        description:
+          'Sistema completo di gestione alberghiera (PMS) abbinato a un portale web. Combina backend .NET 8 con frontend elegante e reattivo.',
+      },
+      {
+        title: 'HenryAI',
+        description:
+          'Bot Discord che simula il comportamento di un membro umano in una community di sviluppatori, progettato per interagire in modo naturale.',
+      },
+      {
+        title: 'EPICBooks',
+        description:
+          'E-commerce di libri online: API, ricerca avanzata, gestione del carrello, pagamento e design reattivo.',
+      },
+    ],
+    quickContacts: [
+      { label: 'Email', value: 'henry8913@hotmail.it', href: 'mailto:henry8913@hotmail.it' },
+      {
+        label: 'LinkedIn',
+        value: 'Henry G.',
+        href: 'https://www.linkedin.com/in/henry-g-full-web-stack-developer/',
+      },
+    ],
+  },
+  about: {
+    title: 'About Me ✨',
+    metaLine: '<!-- about.html - Henry Grecchi -->',
+    subtitle: 'who I am · what I do · where I build',
+    intro: [
+      {
+        text: 'Full Stack Developer inserito in un contesto aziendale internazionale, specializzato nello sviluppo di soluzioni applicative in ambiente Microsoft .NET (C#, SQL Server).',
+        strong: 'Microsoft .NET (C#, SQL Server)',
+      },
+      {
+        text: "Parallelamente, porto avanti una forte specializzazione nello stack MERN (React, Node.js, Express, MongoDB) per la creazione di applicazioni web moderne e responsive. La mia forza è l'unione tra queste competenze tecniche e oltre dieci anni di esperienza a contatto con il pubblico, sviluppando competenze comunicative e commerciali, capacità di comprendere le esigenze dei clienti e di collaborare efficacemente con team multidisciplinari e stakeholder.",
+        strong: 'MERN (React, Node.js, Express, MongoDB)',
+      },
+    ],
+    journeyTitle: 'Il mio percorso 🚀',
+    journey: [
+      "La mia esperienza professionale odierna si focalizza sullo sviluppo di soluzioni enterprise, dove gestisco l'intero ciclo di vita del software: dall'integrazione di API REST alla gestione di database SQL Server tramite C# e Visual Studio.",
+      'Questa doppia competenza (MERN e .NET) mi consente di muovermi con estrema naturalezza sia su architetture backend robuste che su interfacce frontend dinamiche, garantendo sempre soluzioni scalabili e performanti.',
+    ],
+    softSkillsTitle: 'Competenze Trasversali 🤝',
+    softSkills: [
+      {
+        title: 'Comunicazione tecnica e di business',
+        text: 'Capacità di interfacciarmi con stakeholder e team multidisciplinari.',
+      },
+      {
+        title: 'Analisi dei requisiti',
+        text: 'Traduzione delle esigenze del cliente in task operativi e soluzioni digitali efficienti.',
+      },
+      {
+        title: 'Problem solving e organizzazione',
+        text: 'Gestione rigorosa di priorità e scadenze, con un approccio sempre orientato al risultato.',
+      },
+    ],
+    developerSkillsTitle: 'Developer Skills 🧰',
+    developerSkills: [
+      { label: 'Linguaggi & Core', value: 'C#, JavaScript (ES6+), HTML5, CSS3, Python.' },
+      { label: 'Frontend', value: 'React, Bootstrap, AJAX, DOM.' },
+      { label: 'Backend', value: '.NET, Node.js, Express, REST API.' },
+      { label: 'Database', value: 'SQL Server, MongoDB (NoSQL).' },
+      { label: 'Strumenti', value: 'Visual Studio, VS Code, GIT.' },
+    ],
+    valuesTitle: 'I miei valori 🧭',
+    values: [
+      "Credo fermamente nell'importanza della formazione continua e nella condivisione della conoscenza. Affronto ogni sfida tecnologica con creatività e determinazione, puntando sempre a superare le aspettative.",
+      "Per me, il successo di un progetto non si misura solo nell'efficienza del codice, ma soprattutto nell'impatto reale e positivo che le soluzioni digitali riescono ad avere sulle persone e sui processi aziendali.",
+    ],
+    whatImDoingTitle: "What I'm doing 🛠️",
+    services: [
+      {
+        title: '⚙️ Backend Development',
+        text: 'Sviluppo di architetture solide in ambiente Microsoft .NET (C#) e Node.js.',
+      },
+      {
+        title: '🧩 Frontend Development',
+        text: 'Progettazione di interfacce dinamiche e responsive sfruttando principalmente lo stack MERN.',
+      },
+      {
+        title: '🔌 API Integration',
+        text: 'Sviluppo e integrazione di API REST per soluzioni enterprise e di business.',
+      },
+      {
+        title: '🗄️ Database Management',
+        text: 'Gestione avanzata di database relazionali (SQL Server) e NoSQL (MongoDB).',
+      },
+    ],
+  },
+  resume: {
+    title: 'Experience 🚀',
+    metaLine: '// resume.ts - professional journey',
+    subtitle: 'interface Career extends Timeline {}',
+    experienceTitle: 'Experience 💼',
+    educationTitle: 'Education & Specialization 🎓',
+    stackTitle: 'Stack & Strumenti 🧰',
+    experience: [
+      {
+        period: '2025 — Presente',
+        title: 'Software Developer',
+        company: 'International context',
+        summary:
+          'Attualmente inserito in un contesto aziendale internazionale, focalizzato sullo sviluppo di soluzioni enterprise.',
+        tags: ['C#', '.NET', 'SQL Server', 'REST API', 'Stakeholder'],
+      },
+    ],
+    education: [
+      {
+        period: '2024 — 2025',
+        title: 'Full Stack Web Development (MERN)',
+        company: 'Education & specialization',
+        summary:
+          'Forte specializzazione nello stack MERN per la creazione di applicazioni web moderne, responsive e scalabili.',
+        tags: ['React', 'Hooks', 'Node.js', 'Express', 'MongoDB'],
+      },
+      {
+        period: '2024',
+        title: 'Frontend & Core Technologies',
+        company: 'Education',
+        summary: 'Consolidamento delle basi di programmazione e sviluppo di interfacce web avanzate.',
+        tags: ['JavaScript', 'AJAX', 'DOM', 'HTML5', 'CSS3', 'Git'],
+      },
+    ],
+  },
+  portfolio: {
+    title: 'Projects 🚀',
+    metaLine: "// portfolio.js · things I've built ✨",
+    subtitle: 'const projects = [...shipped, ...building]',
+    filters: ['All', 'Web Development', 'Applications', 'Web Design'],
+    projects: [
+      {
+        title: 'E-Core Hyperdrive',
+        category: 'Web Development',
+        description:
+          "Una piattaforma sviluppata sfruttando la potenza di .NET 10, l'efficacia delle Razor Pages per un'interfaccia dinamica e la leggerezza di SQLite per una gestione dati agile e performante.",
+        cover:
+          'https://raw.githubusercontent.com/henry8913/E-Core-Hyperdrive/refs/heads/main/img/GitHub%20-%20Cover.png',
+        github: 'https://github.com/henry8913/E-Core-Hyperdrive',
+      },
+      {
+        title: 'Evergreen Resort',
+        category: 'Web Development',
+        description:
+          'Un sistema completo di gestione alberghiera (PMS) abbinato a un portale web. Questo progetto combina un backend solido in .NET 8 con un frontend elegante e reattivo.',
+        cover:
+          'https://raw.githubusercontent.com/henry8913/EvergreenResort/refs/heads/main/EvergreenResort.Api/wwwroot/img/GitHub%20-%20Cover.png',
+        github: 'https://github.com/henry8913/EvergreenResort',
+      },
+      {
+        title: 'RMI Made in Italy',
+        category: 'Web Development',
+        description:
+          "Piattaforma completa dedicata al restauro, personalizzazione e manutenzione di auto d'epoca di lusso. Include front-end React, back-end Node.js e assistente AI.",
+        cover:
+          'https://raw.githubusercontent.com/henry8913/7_RMI-Made-in-Italy_Front-end/refs/heads/main/public/img/Screenshot.png',
+        live: 'https://7-rmi-made-in-italy-front-end.vercel.app/',
+        github: 'https://github.com/henry8913/7_Capstone-Project_RMI-Made-in-Italy.git',
+      },
+      {
+        title: 'HenryAI',
+        category: 'Applications',
+        description:
+          'Bot Discord innovativo che simula il comportamento di un membro umano in una community di sviluppatori. Progettato per interagire in modo naturale, con personalità e comportamenti realistici.',
+        cover: 'https://raw.githubusercontent.com/henry8913/HenryAI/refs/heads/main/img/cover.jpg',
+        live:
+          'https://discord.com/oauth2/authorize?client_id=1348393467402784849&permissions=469814326&integration_type=0&scope=applications.commands+bot',
+        github: 'https://github.com/henry8913/HenryAI',
+      },
+      {
+        title: 'Trattoria Bella Italia',
+        category: 'Web Development',
+        description:
+          'Sito web responsive per un ristorante italiano che presenta menu, ambiente e servizi online. Include sezioni per il menu completo, informazioni sul ristorante, recensioni dei clienti e form di contatto.',
+        cover:
+          'https://github.com/henry8913/Vite-React-project/blob/main/src/assets/images/cover_a.gif?raw=true',
+        live: 'https://vite-react-project-ten.vercel.app/',
+        github: 'https://github.com/henry8913/Vite-React-project',
+      },
+      {
+        title: 'HyperCar Hub',
+        category: 'Web Development',
+        description:
+          "Demo di piattaforma e-commerce per la visualizzazione e l'acquisto simulato di auto di lusso. Implementa funzionalità di base di un e-commerce con tecnologie web moderne.",
+        cover:
+          'https://github.com/henry8913/4_JavaScript-Advanced-CH6/blob/main/img/cover_b.jpg?raw=true',
+        live: 'https://4-java-script-advanced-ch-6.vercel.app/',
+        github: 'https://github.com/henry8913/4_JavaScript-Advanced-CH6',
+      },
+      {
+        title: 'Spotify Clone',
+        category: 'Web Development',
+        description:
+          "Replica elegante dell'interfaccia Spotify con funzionalità di ricerca artisti, visualizzazione album e riproduzione anteprime musicali tramite API Deezer.",
+        cover:
+          'https://github.com/henry8913/4.1_Build-Week-CH1/blob/Team-1/img/cover_d.jpg?raw=true',
+        live: 'https://4-1-build-week-ch-1.vercel.app/',
+        github: 'https://github.com/henry8913/4.1_Build-Week-CH1',
+      },
+      {
+        title: 'Clone Airbnb',
+        category: 'Web Development',
+        description:
+          "Replica dell'interfaccia Airbnb con design responsivo, implementata utilizzando moderne tecnologie web per replicare l'esperienza di prenotazione online.",
+        cover:
+          'https://github.com/henry8913/3.1_Build-Week-CH1/blob/main/assets/img/cover_b.jpg?raw=true',
+        live: 'https://3-1-build-week-ch-1.vercel.app/',
+        github: 'https://github.com/henry8913/3.1_Build-Week-CH1',
+      },
+      {
+        title: 'Pexels Clone',
+        category: 'Web Development',
+        description:
+          "Applicazione web per la ricerca di immagini con integrazione API di Pexels. Include gestione asincrona delle richieste, visualizzazione dinamica dei risultati e interfaccia reattiva.",
+        cover:
+          'https://raw.githubusercontent.com/henry8913/4_JavaScript-Advanced-CH3/refs/heads/main/img/cover_b.jpg',
+        live: 'https://4-java-script-advanced-ch-3.vercel.app/',
+        github: 'https://github.com/henry8913/4_JavaScript-Advanced-CH3',
+      },
+      {
+        title: 'TechAcademy',
+        category: 'Web Design',
+        description:
+          'Progetto di design web avanzato focalizzato su tecniche CSS moderne, includendo Flexbox, Grid e animazioni personalizzate per creare layout responsive e interattivi.',
+        cover: 'https://raw.githubusercontent.com/henry8913/3_Web-Design-CH6/refs/heads/main/img/cover.gif',
+        live: 'https://3-web-design-ch-6.vercel.app/',
+        github: 'https://github.com/henry8913/3_Web-Design-CH6',
+      },
+      {
+        title: 'Soléa',
+        category: 'Web Design',
+        description:
+          "Soléa è un sito innovativo che ti guida nella scoperta di mete da sogno, offrendo un design attraente e un'interfaccia intuitiva, ottimizzato per tutti i dispositivi.",
+        cover: 'https://raw.githubusercontent.com/henry8913/3_Web-Design-CH4/refs/heads/main/img/cover.png',
+        live: 'https://travel-agency-indol-eight.vercel.app/',
+        github: 'https://github.com/henry8913/3_Web-Design-CH4',
+      },
+      {
+        title: 'Henry Music',
+        category: 'Web Design',
+        description:
+          'Studio pratico di pattern di design responsivo utilizzando CSS moderno. Focus su media queries, unità relative e best practices per la manutenibilità del codice.',
+        cover: 'https://raw.githubusercontent.com/henry8913/3_Web-Design-CH3/refs/heads/main/img/cover.jpg',
+        live: 'https://3-web-design-ch-3.vercel.app/',
+        github: 'https://github.com/henry8913/3_Web-Design-CH3',
+      },
+      {
+        title: 'Coming Soon Landing Page',
+        category: 'Web Design',
+        description:
+          'Questo progetto è stato creato per intrattenere gli utenti mentre aspettano il ritorno online del sito principale. Nel frattempo, hanno la possibilità di giocare a Snake.',
+        cover: 'https://raw.githubusercontent.com/henry8913/Website-Coming-Soon/refs/heads/main/img/cover.jpg',
+        live: 'https://website-coming-soon-rho.vercel.app/',
+        github: 'https://github.com/henry8913/Website-Coming-Soon',
+      },
+      {
+        title: 'Acrylic Spider',
+        category: 'Applications',
+        description:
+          'Progetto open-source che gestisce un robot ragno in acrilico, equipaggiato con servomotori, sensori e un mini PC Raspberry Pi. Grazie alla sua struttura modulare consente esplorazioni efficaci.',
+        cover:
+          'https://raw.githubusercontent.com/henry8913/Acrylic-Spider.py/refs/heads/main/spider.jpg',
+        github: 'https://github.com/henry8913/Acrylic-Spider.py',
+        live: 'https://github.com/henry8913/Acrylic-Spider.py',
+      },
+      {
+        title: 'REST API Test and UI',
+        category: 'Web Development',
+        description:
+          'Suite di test per API REST con interfaccia utente integrata. Strumento per testare endpoints e visualizzare risposte in tempo reale.',
+        cover: 'https://raw.githubusercontent.com/henry8913/REST-API-Test-and-UI/refs/heads/main/img/cover.jpg',
+        live: 'https://rest-api-test-and-ui.vercel.app/',
+        github: 'https://github.com/henry8913/REST-API-Test-and-UI',
+      },
+      {
+        title: 'EPICBooks',
+        category: 'Web Development',
+        description:
+          'E-commerce di Libri Online: sfrutta le API e offre funzionalità come ricerca avanzata, gestione del carrello, sistema di pagamento e un design reattivo.',
+        cover:
+          'https://raw.githubusercontent.com/henry8913/4_JavaScript-Advanced-CH4/refs/heads/main/img/cover.b.jpg',
+        live: 'https://4-java-script-advanced-ch-4.vercel.app/',
+        github: 'https://github.com/henry8913/4_JavaScript-Advanced-CH4',
+      },
+      {
+        title: 'ShushiDev',
+        category: 'Applications',
+        description:
+          'Applicazione per la gestione di ordini di sushi con interfaccia intuitiva. Include sistema di carrello, gestione ordini e integrazione pagamenti.',
+        cover:
+          'https://raw.githubusercontent.com/henry8913/ShushiDev/refs/heads/main/rolls/static/rolls/cover.jpg',
+        live: 'https://shushidev.onrender.com/',
+        github: 'https://github.com/henry8913/ShushiDev',
+      },
+    ],
+  },
+  projects: [
+    {
+      name: 'e-core-hyperdrive',
+      title: 'E-Core Hyperdrive',
+      context:
+        'Piattaforma sviluppata con .NET 10 e Razor Pages, con database SQLite per una gestione dati agile e performante.',
+      stack: ['.NET 10', 'Razor Pages', 'SQLite'],
+      links: [{ label: 'GitHub', href: 'https://github.com/henry8913/E-Core-Hyperdrive' }],
+    },
+    {
+      name: 'evergreen-resort',
+      title: 'Evergreen Resort',
+      context:
+        'Sistema completo di gestione alberghiera (PMS) abbinato a portale web: backend solido in .NET 8 con frontend elegante e reattivo.',
+      stack: ['.NET 8', 'Web'],
+      links: [{ label: 'GitHub', href: 'https://github.com/henry8913/EvergreenResort' }],
+    },
+    {
+      name: 'rmi-made-in-italy',
+      title: 'RMI Made in Italy',
+      context:
+        "Piattaforma completa dedicata al restauro, personalizzazione e manutenzione di auto d'epoca di lusso. Include front-end React, back-end Node.js e assistente AI.",
+      stack: ['React', 'Node.js', 'AI'],
+      links: [
+        { label: 'Live', href: 'https://7-rmi-made-in-italy-front-end.vercel.app/' },
+        { label: 'GitHub', href: 'https://github.com/henry8913/7_Capstone-Project_RMI-Made-in-Italy.git' },
+      ],
+    },
+    {
+      name: 'henryai',
+      title: 'HenryAI',
+      context:
+        'Bot Discord che simula il comportamento di un membro umano in una community di sviluppatori, con interazioni naturali e comportamenti realistici.',
+      stack: ['Discord', 'Bot'],
+      links: [
+        {
+          label: 'Invite',
+          href: 'https://discord.com/oauth2/authorize?client_id=1348393467402784849&permissions=469814326&integration_type=0&scope=applications.commands+bot',
+        },
+        { label: 'GitHub', href: 'https://github.com/henry8913/HenryAI' },
+      ],
+    },
+    {
+      name: 'epicbooks',
+      title: 'EPICBooks',
+      context:
+        'E-commerce di libri online: ricerca avanzata, gestione del carrello, sistema di pagamento e design reattivo.',
+      stack: ['JavaScript', 'APIs'],
+      links: [{ label: 'GitHub', href: 'https://github.com/henry8913/4_JavaScript-Advanced-CH4' }],
+    },
+  ],
+  skills: {
+    stack: [
+      { name: 'C# & .NET Environment', level: 85 },
+      { name: 'React & JavaScript (ES6+)', level: 90 },
+      { name: 'Node.js & Express', level: 85 },
+      { name: 'SQL Server & MongoDB', level: 80 },
+      { name: 'Visual Studio, VS Code & Git', level: 90 },
+    ],
+    skills: {
+      'Linguaggi & Core': ['C#', 'JavaScript (ES6+)', 'HTML5', 'CSS3', 'Python'],
+      Frontend: ['React', 'Bootstrap', 'AJAX', 'DOM'],
+      Backend: ['.NET', 'Node.js', 'Express', 'REST API'],
+      Database: ['SQL Server', 'MongoDB'],
+      Strumenti: ['Visual Studio', 'VS Code', 'Git', 'GitHub'],
+    },
+  },
+  certifications: [
+    {
+      title: 'Full Stack Developer',
+      category: 'Web Developer',
+      year: '2025',
+      description: 'Sviluppo di applicazioni web moderne e scalabili attraverso vari linguaggi e tecnologie.',
+      cover: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97',
+    },
+    {
+      title: 'Python Intermediate',
+      category: 'Python Development',
+      year: '2025',
+      description: 'Sviluppo di applicazioni, scripting e concetti intermedi del linguaggio Python.',
+      cover:
+        'https://images.unsplash.com/photo-1649180556628-9ba704115795?q=80&w=2062&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    },
+    {
+      title: 'AI & GitHub Copilot',
+      category: 'AI Development',
+      year: '2025',
+      description: 'Utilizzo di AI & GitHub Copilot per ottimizzare la produttività e la qualità del codice.',
+      cover:
+        'https://images.unsplash.com/photo-1711831521065-e546a5aca68e?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    },
+    {
+      title: 'Backend Development & APIs',
+      category: 'Web Developer',
+      year: '2025',
+      description: 'Node.js, Express, MongoDB, e sviluppo di API RESTful.',
+      cover: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c',
+    },
+    {
+      title: 'React Development',
+      category: 'Web Developer',
+      year: '2025',
+      description: 'Sviluppo frontend avanzato con React, Redux e gestione dello stato.',
+      cover: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee',
+    },
+    {
+      title: 'Advanced JavaScript',
+      category: 'Web Developer',
+      year: '2025',
+      description: 'JavaScript ES6+, programmazione asincrona e pattern avanzati.',
+      cover: 'https://images.unsplash.com/photo-1579468118864-1b9ea3c0db4a',
+    },
+    {
+      title: 'JavaScript Fundamentals',
+      category: 'Web Developer',
+      year: '2024',
+      description: 'Fondamenti di JavaScript e manipolazione del DOM.',
+      cover: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479',
+    },
+    {
+      title: 'CSS & Bootstrap',
+      category: 'Web Developer',
+      year: '2024',
+      description: 'Styling avanzato con CSS3 e framework Bootstrap.',
+      cover: 'https://images.unsplash.com/photo-1621839673705-6617adf9e890',
+    },
+    {
+      title: 'HTML & Web Basics',
+      category: 'Web Developer',
+      year: '2024',
+      description: 'Fondamenti di HTML5 e struttura delle pagine web.',
+      cover: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713',
+    },
+    {
+      title: 'Unity & Character Creation',
+      category: 'Game Development',
+      year: '2024',
+      description: 'Sviluppo di videogiochi con Unity e Visual Studio, focus sulla creazione di personaggi.',
+      cover: 'https://images.unsplash.com/photo-1614294148960-9aa740632a87',
+    },
+  ],
+  blogPosts: [
+    {
+      dateISO: '2026-12-29',
+      dateLabel: '29 Dic 2026',
+      category: 'Tech Trends',
+      title: 'Riflessioni e Tech Trends 2027',
+      excerpt:
+        "Le tecnologie emergenti da tenere d'occhio per il prossimo anno: dall'AI avanzata a nuove architetture web.",
+      cover:
+        'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-11-04',
+      dateLabel: '04 Nov 2026',
+      category: 'UI/UX',
+      title: 'Design System Scalabili',
+      excerpt: 'Come costruire e mantenere un Design System aziendale coerente tra diversi team e progetti.',
+      cover:
+        'https://images.unsplash.com/photo-1561070791-2526d30994b5?q=80&w=2000&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-10-17',
+      dateLabel: '17 Ott 2026',
+      category: 'Security',
+      title: 'Sviluppo di API Sicure',
+      excerpt: 'Best practices e pattern fondamentali per proteggere le tue API da attacchi moderni e vulnerabilità.',
+      cover:
+        'https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-09-09',
+      dateLabel: '09 Set 2026',
+      category: 'Frontend',
+      title: 'HTMX e UI Reattive',
+      excerpt: 'Costruire interfacce utente dinamiche e veloci inviando HTML over the wire, senza pesanti framework JS.',
+      cover:
+        'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=2088&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-08-21',
+      dateLabel: '21 Ago 2026',
+      category: 'Database',
+      title: 'Database Serverless',
+      excerpt: 'Il futuro della persistenza dei dati: scalabilità automatica e pricing pay-per-use per applicazioni cloud.',
+      cover:
+        'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?q=80&w=2071&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-07-07',
+      dateLabel: '07 Lug 2026',
+      category: 'Frontend',
+      title: 'Novità in Svelte 6',
+      excerpt: "Analisi delle nuove feature e dei miglioramenti di performance nell'ultima major release di Svelte.",
+      cover:
+        'https://images.unsplash.com/photo-1550439062-609e1531270e?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-06-28',
+      dateLabel: '28 Giu 2026',
+      category: 'DevOps',
+      title: 'Kubernetes per Sviluppatori',
+      excerpt: 'Guida pratica ai concetti essenziali di Kubernetes: pod, deployment e servizi per gestire app containerizzate.',
+      cover:
+        'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-05-11',
+      dateLabel: '11 Mag 2026',
+      category: 'Security',
+      title: 'Cybersecurity Trends',
+      excerpt: 'Le principali minacce alla sicurezza informatica nel 2026 e le strategie difensive più efficaci.',
+      cover:
+        'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-04-25',
+      dateLabel: '25 Apr 2026',
+      category: 'React',
+      title: 'Ottimizzazione con Next.js 16',
+      excerpt: 'Sfruttare le nuove capacità di rendering e data fetching per costruire applicazioni React super veloci.',
+      cover:
+        'https://images.unsplash.com/photo-1768839726129-8dcb29a4e7b8?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    },
+    {
+      dateISO: '2026-03-03',
+      dateLabel: '03 Mar 2026',
+      category: 'Performance',
+      title: 'Il potenziale di WebAssembly',
+      excerpt: 'Come WASM sta portando performance di livello nativo nel browser per applicazioni ad alto calcolo.',
+      cover:
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-02-19',
+      dateLabel: '19 Feb 2026',
+      category: 'Architecture',
+      title: 'Micro Frontend Architecture',
+      excerpt: 'Suddividere interfacce monolitiche in team indipendenti per scalare lo sviluppo e la delivery.',
+      cover:
+        'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2026-01-08',
+      dateLabel: '08 Gen 2026',
+      category: 'Backend',
+      title: 'Deno vs Node.js nel 2026',
+      excerpt: "Confronto tra i due runtime JavaScript: performance, sicurezza e l'evoluzione dell'ecosistema.",
+      cover:
+        'https://images.unsplash.com/photo-1627398242454-45a1465c2479?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2025-12-14',
+      dateLabel: '14 Dic 2025',
+      category: 'CSS',
+      title: 'Tailwind CSS Tricks',
+      excerpt: 'Tecniche avanzate e utility classes meno conosciute per creare layout complessi in pochissimo tempo.',
+      cover:
+        'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2025-11-22',
+      dateLabel: '22 Nov 2025',
+      category: 'API',
+      title: 'GraphQL vs REST',
+      excerpt: "Quando scegliere GraphQL e quando rimanere con REST: pro e contro nell'architettura moderna.",
+      cover:
+        'https://images.unsplash.com/photo-1555099962-4199c345e5dd?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2025-10-05',
+      dateLabel: '05 Ott 2025',
+      category: 'AI',
+      title: "L'impatto dell'AI nello Sviluppo Web",
+      excerpt: "Come gli strumenti basati su Intelligenza Artificiale stanno trasformando il modo in cui scriviamo codice.",
+      cover:
+        'https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      dateISO: '2025-09-12',
+      dateLabel: '12 Set 2025',
+      category: 'Programming',
+      title: 'Introduzione a Rust',
+      excerpt: 'Perché Rust sta diventando il linguaggio preferito per lo sviluppo di tool ad alte prestazioni.',
+      cover: 'https://miro.medium.com/v2/0*Eqqrv9zVpH99X726.png',
+    },
+    {
+      dateISO: '2025-08-20',
+      dateLabel: '20 Ago 2025',
+      category: 'Cloud',
+      title: 'Serverless Architecture',
+      excerpt: "Vantaggi e sfide dell'architettura serverless per applicazioni moderne: casi d'uso e best practices.",
+      cover: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31',
+    },
+    {
+      dateISO: '2025-07-15',
+      dateLabel: '15 Lug 2025',
+      category: 'Mobile',
+      title: 'Flutter vs React Native',
+      excerpt: 'Confronto approfondito tra i due framework più popolari per lo sviluppo di app mobile cross-platform nel 2025.',
+      cover:
+        'https://images.unsplash.com/photo-1604637783927-a4ab04dcd463?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    },
+    {
+      dateISO: '2025-06-15',
+      dateLabel: '15 Giu 2025',
+      category: 'Frontend Development',
+      title: 'Il Futuro dei Web Components',
+      excerpt: 'Come i Web Components stanno rivoluzionando lo sviluppo di interfacce web moderne e riutilizzabili.',
+      cover: 'https://images.unsplash.com/photo-1550439062-609e1531270e',
+    },
+    {
+      dateISO: '2025-05-10',
+      dateLabel: '10 Mag 2025',
+      category: 'Security',
+      title: 'Cybersecurity nel Web3',
+      excerpt:
+        "Nuove sfide e soluzioni per la sicurezza nell'era del Web3 e delle applicazioni decentralizzate.",
+      cover: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5',
+    },
+    {
+      dateISO: '2025-04-20',
+      dateLabel: '20 Apr 2025',
+      category: 'Infrastructure',
+      title: 'Edge Computing e PWA',
+      excerpt:
+        "Come l'Edge Computing sta trasformando le Progressive Web Apps e migliorando l'esperienza utente.",
+      cover: 'https://images.unsplash.com/photo-1623282033815-40b05d96c903',
+    },
+    {
+      dateISO: '2025-03-15',
+      dateLabel: '15 Mar 2025',
+      category: 'Cloud Computing',
+      title: 'Architetture Serverless',
+      excerpt: "Vantaggi e sfide nell'implementazione di architetture serverless per applicazioni moderne.",
+      cover: 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81',
+    },
+    {
+      dateISO: '2025-02-10',
+      dateLabel: '10 Feb 2025',
+      category: 'Frontend',
+      title: 'Gestione Stato Moderna',
+      excerpt: 'Analisi delle moderne soluzioni di state management: Redux Toolkit, Zustand, Jotai e XState a confronto.',
+      cover: 'https://images.unsplash.com/photo-1633356122102-3fe601e05bd2',
+    },
+    {
+      dateISO: '2025-01-20',
+      dateLabel: '20 Gen 2025',
+      category: 'Performance',
+      title: 'Core Web Vitals',
+      excerpt: 'Ottimizzare le metriche Core Web Vitals per migliorare SEO e user experience delle applicazioni web.',
+      cover: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3',
+    },
+    {
+      dateISO: '2024-12-15',
+      dateLabel: '15 Dic 2024',
+      category: 'Testing',
+      title: 'Testing E2E Moderno',
+      excerpt: 'Best practices per il testing end-to-end con Cypress e Playwright nelle applicazioni web moderne.',
+      cover: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479',
+    },
+    {
+      dateISO: '2024-11-05',
+      dateLabel: '5 Nov 2024',
+      category: 'DevOps',
+      title: 'CI/CD per Web Apps',
+      excerpt: 'Implementare pipeline di continuous integration e deployment per applicazioni web scalabili.',
+      cover: 'https://images.unsplash.com/photo-1552664730-d307ca884978',
+    },
+  ],
+  experience: [
+    {
+      title: 'Software Developer',
+      company: 'International environment',
+      period: 'Presente',
+      highlights: [
+        'Sviluppo in ambiente Microsoft .NET (C#).',
+        'Gestione database SQL Server e integrazione API REST.',
+        'Collaborazione con team multidisciplinari e stakeholder.',
+      ],
+    },
+    {
+      title: 'Full Stack Web Development (MERN)',
+      company: 'Education & specialization',
+      period: '2024 — 2025',
+      highlights: [
+        'React: Hooks, routing e gestione dello stato.',
+        'Node.js / Express: sviluppo di API RESTful.',
+        'MongoDB e architetture NoSQL.',
+      ],
+    },
+    {
+      title: 'Frontend & Core Technologies',
+      company: 'Education',
+      period: '2024',
+      highlights: [
+        'JavaScript (ES6+), AJAX e manipolazione DOM.',
+        'HTML5, CSS3, Bootstrap.',
+        'Git e GitHub (version control).',
+      ],
+    },
+  ],
+  contact: {
+    email: 'henry8913@hotmail.it',
+    links: [
+      { label: 'GitHub', href: 'https://github.com/henry8913' },
+      { label: 'LinkedIn', href: 'https://www.linkedin.com/in/henry-g-full-web-stack-developer/' },
+      { label: 'WhatsApp', href: 'https://wa.me/393926936916' },
+    ],
+  },
+} as const
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+type Tone = 'comment' | 'keyword' | 'accent' | 'plain'
+type CodeLine = { content: string; tone?: Tone }
+
+function codeLine(content: string, tone: Tone = 'plain'): CodeLine {
+  return { content, tone }
+}
+
+function useEditorLineNumbers(maxLines: number = 200) {
+  const contentRef = useRef<HTMLDivElement | null>(null)
+  const [lineCount, setLineCount] = useState(1)
+  const [lineHeightPx, setLineHeightPx] = useState(20)
+  const [padTopPx, setPadTopPx] = useState(24)
+  const [padBottomPx, setPadBottomPx] = useState(18)
+
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+
+    const update = () => {
+      const style = window.getComputedStyle(el)
+      const paddingTop = Number.parseFloat(style.paddingTop) || 0
+      const paddingBottom = Number.parseFloat(style.paddingBottom) || 0
+      const lh = Number.parseFloat(style.lineHeight)
+      const computedLineHeight = Number.isFinite(lh) && lh > 0 ? lh : 20
+      const inner = Math.max(0, el.scrollHeight - paddingTop - paddingBottom)
+      const next = clamp(Math.ceil(inner / computedLineHeight), 1, maxLines)
+
+      setLineHeightPx((prev) => (prev === computedLineHeight ? prev : computedLineHeight))
+      setPadTopPx((prev) => (prev === paddingTop ? prev : paddingTop))
+      setPadBottomPx((prev) => (prev === paddingBottom ? prev : paddingBottom))
+      setLineCount((prev) => (prev === next ? prev : next))
+    }
+
+    update()
+
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => update())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [maxLines])
+
+  return { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx }
+}
+
+function chatId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+const CHAT_LEGACY_STORAGE_KEY = 'henryai.chat.v1'
+const CHAT_STORAGE_KEY = 'henryai.chat.threads.v1'
+const CHAT_MAX_SAVED_MESSAGES = 200
+const CHAT_MAX_SAVED_THREADS = 30
+
+function createChatThread(title: string, messages: ChatMessage[] = []): ChatThread {
+  const now = Date.now()
+  return {
+    id: chatId(),
+    title,
+    messages: messages.slice(-CHAT_MAX_SAVED_MESSAGES),
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+function loadLegacyChatMessagesFromStorage(): ChatMessage[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(CHAT_LEGACY_STORAGE_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    const messagesRaw =
+      parsed && typeof parsed === 'object' && Array.isArray((parsed as { messages?: unknown }).messages)
+        ? (parsed as { messages: unknown[] }).messages
+        : Array.isArray(parsed)
+          ? parsed
+          : null
+    if (!messagesRaw) return []
+
+    const messages = messagesRaw
+      .map((m) => {
+        if (!m || typeof m !== 'object') return null
+        const id = (m as { id?: unknown }).id
+        const role = (m as { role?: unknown }).role
+        const content = (m as { content?: unknown }).content
+        if (typeof id !== 'string') return null
+        if (role !== 'user' && role !== 'assistant') return null
+        if (typeof content !== 'string') return null
+        return { id, role, content } satisfies ChatMessage
+      })
+      .filter((m): m is ChatMessage => Boolean(m))
+
+    return messages.slice(-CHAT_MAX_SAVED_MESSAGES)
+  } catch {
+    return []
+  }
+}
+
+function loadChatStateFromStorage(): { threads: ChatThread[]; activeThreadId: string } {
+  if (typeof window === 'undefined') {
+    const t = createChatThread('Chat 1', [])
+    return { threads: [t], activeThreadId: t.id }
+  }
+
+  const parseMessages = (messagesRaw: unknown[]): ChatMessage[] => {
+    return messagesRaw
+      .map((m) => {
+        if (!m || typeof m !== 'object') return null
+        const id = (m as { id?: unknown }).id
+        const role = (m as { role?: unknown }).role
+        const content = (m as { content?: unknown }).content
+        if (typeof id !== 'string') return null
+        if (role !== 'user' && role !== 'assistant') return null
+        if (typeof content !== 'string') return null
+        return { id, role, content } satisfies ChatMessage
+      })
+      .filter((m): m is ChatMessage => Boolean(m))
+      .slice(-CHAT_MAX_SAVED_MESSAGES)
+  }
+
+  const parseThreads = (threadsRaw: unknown[]): ChatThread[] => {
+    const now = Date.now()
+    return threadsRaw
+      .map((t) => {
+        if (!t || typeof t !== 'object') return null
+        const id = (t as { id?: unknown }).id
+        const title = (t as { title?: unknown }).title
+        const messages = (t as { messages?: unknown }).messages
+        const createdAt = (t as { createdAt?: unknown }).createdAt
+        const updatedAt = (t as { updatedAt?: unknown }).updatedAt
+        if (typeof id !== 'string') return null
+        if (typeof title !== 'string' || title.trim().length === 0) return null
+        if (!Array.isArray(messages)) return null
+        return {
+          id,
+          title,
+          messages: parseMessages(messages),
+          createdAt: typeof createdAt === 'number' ? createdAt : now,
+          updatedAt: typeof updatedAt === 'number' ? updatedAt : now,
+        } satisfies ChatThread
+      })
+      .filter((t): t is ChatThread => Boolean(t))
+      .slice(-CHAT_MAX_SAVED_THREADS)
+  }
+
+  try {
+    const raw = window.localStorage.getItem(CHAT_STORAGE_KEY)
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw)
+      const threadsRaw =
+        parsed && typeof parsed === 'object' && Array.isArray((parsed as { threads?: unknown }).threads)
+          ? (parsed as { threads: unknown[] }).threads
+          : null
+      const activeThreadIdRaw =
+        parsed && typeof parsed === 'object' ? (parsed as { activeThreadId?: unknown }).activeThreadId : undefined
+
+      const threads = threadsRaw ? parseThreads(threadsRaw) : []
+      if (threads.length) {
+        const activeThreadId =
+          typeof activeThreadIdRaw === 'string' && threads.some((t) => t.id === activeThreadIdRaw)
+            ? activeThreadIdRaw
+            : threads[0]?.id || ''
+        return { threads, activeThreadId }
+      }
+    }
+  } catch {
+    //
+  }
+
+  const legacyMessages = loadLegacyChatMessagesFromStorage()
+  const first = createChatThread('Chat 1', legacyMessages)
+  return { threads: [first], activeThreadId: first.id }
+}
+
+function saveChatStateToStorage(threads: ChatThread[], activeThreadId: string) {
+  if (typeof window === 'undefined') return
+  try {
+    const payload = {
+      version: 1,
+      activeThreadId,
+      threads: threads.slice(-CHAT_MAX_SAVED_THREADS).map((t) => ({
+        id: t.id,
+        title: t.title,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+        messages: t.messages.slice(-CHAT_MAX_SAVED_MESSAGES),
+      })),
+    }
+    window.localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(payload))
+  } catch {
+    return
+  }
+}
+
+function buildHenryAISiteContext() {
+  const profile = CONTENT.profile
+  const about = CONTENT.about
+  const resume = CONTENT.resume
+  const skills = CONTENT.skills
+  const portfolio = CONTENT.portfolio as PortfolioContent
+  const certifications = CONTENT.certifications as readonly CertificationItem[]
+  const posts = CONTENT.blogPosts as readonly BlogPostItem[]
+  const contact = CONTENT.contact
+
+  const projects = portfolio.projects
+    .map((p) => {
+      const links = [p.live ? `live: ${p.live}` : null, p.github ? `github: ${p.github}` : null].filter(Boolean).join(' · ')
+      return `- ${p.title} (${p.category}) — ${p.description}${links ? `\n  ${links}` : ''}`
+    })
+    .join('\n')
+
+  const certs = certifications.map((c) => `- ${c.title} — ${c.category} (${c.year})`).join('\n')
+
+  const blog = posts
+    .map((p) => `- ${p.title} — ${p.category} (${p.dateLabel})\n  ${p.excerpt}`)
+    .join('\n')
+
+  const stack = skills.stack.map((s) => `- ${s.name}: ${s.level}%`).join('\n')
+
+  const contactLines = [
+    `email: ${contact.email}`,
+    ...contact.links.map((l) => `${l.label}: ${l.href}`),
+  ].join('\n')
+
+  return [
+    `Sito: ${CONTENT.siteName}`,
+    '',
+    'Profilo',
+    `- nome: ${profile.firstName} ${profile.lastName}`,
+    `- ruoli: ${profile.roles.join(', ')}`,
+    `- tagline: ${profile.tagline}`,
+    '',
+    'About',
+    `- titolo: ${about.title}`,
+    `- intro: ${about.intro.map((i) => i.text).join(' ')}`,
+    `- competenze dev: ${about.developerSkills.map((s) => `${s.label}: ${s.value}`).join(' · ')}`,
+    '',
+    'Resume',
+    `- experience: ${resume.experience.map((e) => `${e.period} ${e.title} @ ${e.company}`).join(' · ')}`,
+    `- education: ${resume.education.map((e) => `${e.period} ${e.title}`).join(' · ')}`,
+    '',
+    'Skills',
+    stack,
+    '',
+    'Progetti (Portfolio)',
+    projects,
+    '',
+    'Certificazioni',
+    certs,
+    '',
+    'Blog',
+    blog,
+    '',
+    'Contatti',
+    contactLines,
+  ].join('\n')
+}
+
+function parseShellArgs(input: string) {
+  const parts: string[] = []
+  let current = ''
+  let inSingle = false
+  let inDouble = false
+
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input[i]
+
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle
+      continue
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble
+      continue
+    }
+    if (!inSingle && !inDouble && /\s/.test(ch)) {
+      if (current) {
+        parts.push(current)
+        current = ''
+      }
+      continue
+    }
+    current += ch
+  }
+
+  if (current) parts.push(current)
+  return parts
+}
+
+function terminalPreviewForFile(id: FileId): string[] {
+  if (id === 'about.html') {
+    return [
+      '<!-- about.html - Henry Grecchi -->',
+      '<h1>About Me ✨</h1>',
+      `<p>${CONTENT.about.subtitle}</p>`,
+    ]
+  }
+
+  if (id === 'skills.json') {
+    return [
+      '{',
+      '  "stack": [',
+      ...CONTENT.skills.stack.slice(0, 5).map((s) => `    { "name": "${s.name}", "level": ${s.level} },`),
+      '  ]',
+      '}',
+    ]
+  }
+
+  if (id === 'resume.ts') {
+    return [
+      '// resume.ts',
+      ...CONTENT.resume.experience.slice(0, 3).map((e) => `- ${e.period} ${e.title} @ ${e.company}`),
+      ...CONTENT.resume.education.slice(0, 2).map((e) => `- ${e.period} ${e.title} (${e.company})`),
+    ]
+  }
+
+  if (id === 'portfolio.js') {
+    const portfolio = CONTENT.portfolio as PortfolioContent
+    return [
+      '// portfolio.js',
+      ...portfolio.projects.slice(0, 6).map((p) => `- ${p.title} (${p.category})`),
+    ]
+  }
+
+  if (id === 'certifications.js') {
+    const certifications = CONTENT.certifications as readonly CertificationItem[]
+    return [
+      '// certifications.js',
+      ...certifications.slice(0, 6).map((c) => `- ${c.title} — ${c.category} (${c.year})`),
+    ]
+  }
+
+  if (id === 'contact.css') {
+    return ['/* contact.css */', `email: ${CONTENT.contact.email}`]
+  }
+
+  if (id === 'blog.html') {
+    const posts = CONTENT.blogPosts as readonly BlogPostItem[]
+    return ['<!-- blog.html -->', ...posts.slice(0, 4).map((p) => `- ${p.title} (${p.dateLabel})`)]
+  }
+
+  if (id === 'resume.pdf') {
+    return ['resume.pdf', 'Apri il file dal pannello editor per scaricarlo o visualizzarlo.']
+  }
+
+  if (id === 'README.md') {
+    return ['# README.md', 'Apri il file dal pannello editor per visualizzarlo.']
+  }
+
+  return [id]
+}
+
+function statusLanguageForExt(ext?: FileEntry['ext']) {
+  switch (ext) {
+    case 'tsx':
+      return 'TypeScript JSX'
+    case 'ts':
+      return 'TypeScript'
+    case 'js':
+      return 'JavaScript'
+    case 'json':
+      return 'JSON'
+    case 'html':
+      return 'HTML'
+    case 'css':
+      return 'CSS'
+    case 'md':
+      return 'Markdown'
+    case 'pdf':
+      return 'PDF'
+    default:
+      return 'Text'
+  }
+}
+
+function extColor(ext: FileEntry['ext']) {
+  switch (ext) {
+    case 'tsx':
+      return '#61dafb'
+    case 'ts':
+      return '#3178c6'
+    case 'js':
+      return '#f7df1e'
+    case 'json':
+      return '#cbcb41'
+    case 'html':
+      return '#e34c26'
+    case 'css':
+      return '#563d7c'
+    case 'md':
+      return '#9da0a6'
+    case 'pdf':
+      return '#ff5f56'
+  }
+}
+
+function FileIcon({ ext }: { ext: FileEntry['ext'] }) {
+  const color = extColor(ext)
+  const codicon =
+    ext === 'json'
+      ? 'json'
+      : ext === 'md'
+        ? 'markdown'
+        : ext === 'pdf'
+          ? 'file-pdf'
+          : 'file-code'
+  return (
+    <span className="file-icon" style={{ color }} aria-hidden="true">
+      <Codicon name={codicon} />
+    </span>
+  )
+}
+
+type ActivityId = 'explorer' | 'search' | 'scm' | 'run' | 'extensions' | 'remote' | 'github-actions' | 'package'
+
+function Codicon({
+  name,
+  title,
+  className,
+}: {
+  name: string
+  title?: string
+  className?: string
+}) {
+  return (
+    <span
+      className={`codicon codicon-${name}${className ? ` ${className}` : ''}`}
+      aria-hidden="true"
+      title={title}
+    />
+  )
+}
+
+function chipTone(label: string) {
+  const k = label.trim().toLowerCase()
+  if (k === 'web development') return { fg: '#4fc1ff', border: 'rgba(79, 193, 255, 0.35)', bg: 'rgba(0, 122, 204, 0.12)' }
+  if (k === 'applications') return { fg: '#faff5f', border: 'rgba(250, 255, 95, 0.35)', bg: 'rgba(250, 255, 95, 0.12)' }
+  if (k === 'web design' || k.includes('ui') || k.includes('ux')) return { fg: '#d16d9e', border: 'rgba(209, 109, 158, 0.35)', bg: 'rgba(209, 109, 158, 0.14)' }
+  if (k.includes('react')) return { fg: '#4fc1ff', border: 'rgba(79, 193, 255, 0.35)', bg: 'rgba(0, 122, 204, 0.12)' }
+  if (k.includes('typescript') || k === 'ts' || k === 'c#') return { fg: '#4fc1ff', border: 'rgba(79, 193, 255, 0.35)', bg: 'rgba(0, 122, 204, 0.12)' }
+  if (k.includes('.net') || k.includes('dotnet')) return { fg: '#4fc1ff', border: 'rgba(79, 193, 255, 0.35)', bg: 'rgba(0, 122, 204, 0.12)' }
+  if (k.includes('node') || k.includes('express')) return { fg: '#6a9955', border: 'rgba(106, 153, 85, 0.35)', bg: 'rgba(106, 153, 85, 0.14)' }
+  if (k.includes('mongo')) return { fg: '#6a9955', border: 'rgba(106, 153, 85, 0.35)', bg: 'rgba(106, 153, 85, 0.14)' }
+  if (k.includes('sql')) return { fg: '#f76d55', border: 'rgba(247, 109, 85, 0.35)', bg: 'rgba(247, 109, 85, 0.14)' }
+  if (k.includes('javascript') || k === 'js') return { fg: '#faff5f', border: 'rgba(250, 255, 95, 0.35)', bg: 'rgba(250, 255, 95, 0.12)' }
+  if (k.includes('html') || k.includes('css')) return { fg: '#d16d9e', border: 'rgba(209, 109, 158, 0.35)', bg: 'rgba(209, 109, 158, 0.14)' }
+  if (k.includes('python')) return { fg: '#4fc1ff', border: 'rgba(79, 193, 255, 0.35)', bg: 'rgba(0, 122, 204, 0.12)' }
+  if (k.includes('git')) return { fg: '#f76d55', border: 'rgba(247, 109, 85, 0.35)', bg: 'rgba(247, 109, 85, 0.14)' }
+  if (k.includes('github')) return { fg: '#c586c0', border: 'rgba(197, 134, 192, 0.35)', bg: 'rgba(197, 134, 192, 0.14)' }
+  if (k.includes('linkedin')) return { fg: '#4fc1ff', border: 'rgba(79, 193, 255, 0.35)', bg: 'rgba(0, 122, 204, 0.12)' }
+  if (k.includes('email') || k.includes('mail')) return { fg: '#f76d55', border: 'rgba(247, 109, 85, 0.35)', bg: 'rgba(247, 109, 85, 0.14)' }
+  return { fg: '#d4d4d4', border: 'rgba(255, 255, 255, 0.14)', bg: 'rgba(255, 255, 255, 0.03)' }
+}
+
+function chipVars(label: string) {
+  const t = chipTone(label)
+  return {
+    ['--chip-fg' as never]: t.fg,
+    ['--chip-border' as never]: t.border,
+    ['--chip-bg' as never]: t.bg,
+  }
+}
+
+function Typewriter({
+  phrases,
+  className,
+}: {
+  phrases: readonly string[]
+  className?: string
+}) {
+  const [phraseIndex, setPhraseIndex] = useState(0)
+  const [text, setText] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const current = phrases[phraseIndex] ?? ''
+
+  useEffect(() => {
+    const typingMs = isDeleting ? 40 : 70
+    const pauseAfterTypedMs = 1550
+    const pauseAfterDeletedMs = 520
+
+    const isFullyTyped = !isDeleting && text === current
+    const isFullyDeleted = isDeleting && text.length === 0
+
+    const delayMs = isFullyTyped ? pauseAfterTypedMs : isFullyDeleted ? pauseAfterDeletedMs : typingMs
+
+    const t = window.setTimeout(() => {
+      if (isFullyTyped) {
+        setIsDeleting(true)
+        return
+      }
+
+      if (isFullyDeleted) {
+        setIsDeleting(false)
+        setPhraseIndex((i) => (i + 1) % Math.max(phrases.length, 1))
+        return
+      }
+
+      const nextLen = isDeleting ? Math.max(0, text.length - 1) : Math.min(current.length, text.length + 1)
+      setText(current.slice(0, nextLen))
+    }, delayMs)
+
+    return () => window.clearTimeout(t)
+  }, [current, isDeleting, phrases.length, text])
+
+  return (
+    <span className={`typewriter${className ? ` ${className}` : ''}`} aria-live="polite">
+      <span className="typewriter-text">{text}</span>
+      <span className="typewriter-caret" aria-hidden="true" />
+    </span>
+  )
+}
+
+function HomeView({ openFile, openChat }: { openFile: (id: FileId) => void; openChat: () => void }) {
+  const profile = CONTENT.profile
+  const home = CONTENT.home
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+  const codiconForLink = (label: string) => {
+    const k = label.trim().toLowerCase()
+    if (k === 'github') return 'github'
+    if (k === 'linkedin') return 'account'
+    if (k === 'whatsapp') return 'comment-discussion'
+    if (k === 'email') return 'mail'
+    return 'link-external'
+  }
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+        <div ref={contentRef} className="home">
+        <div className="home-topline">// hello world !! welcome to my portfolio ✨</div>
+
+        <div className="home-title">
+          <span className="home-first">{profile.firstName}</span>
+          <span className="home-last">{profile.lastName}</span>
+        </div>
+
+        <div className="home-badges">
+          {profile.roles.map((role) => (
+            <span key={role} className="pill" style={chipVars(role)}>
+              <span className="pill-dot" style={{ background: chipTone(role).fg }} />
+              {role}
+            </span>
+          ))}
+          <button type="button" className="pill pill-link pill-highlight" onClick={openChat}>
+            {profile.companyBadge.label}
+          </button>
+          <span className="cursor" aria-hidden="true" />
+        </div>
+
+        <div className="home-body">
+          <div className="home-line">
+            <Typewriter
+              phrases={[
+                'Building enterprise solutions in .NET and modern web apps in MERN. 🚀',
+                'My peak creative hour? Coding at night with a fresh cup of coffee. ☕️',
+              ]}
+            />
+          </div>
+          <div className="home-paragraphs">
+            <h2 className="home-h2">{home.heading}</h2>
+            {home.paragraphs.map((p) => (
+              <p key={p} className="home-paragraph">
+                {p}
+              </p>
+            ))}
+          </div>
+        </div>
+
+        <div className="home-actions">
+          <button type="button" className="vs-button primary" onClick={() => openFile('portfolio.js')}>
+            <Codicon name="repo" className="btn-icon" />
+            Portfolio
+          </button>
+          <button type="button" className="vs-button" onClick={() => openFile('about.html')}>
+            <Codicon name="account" className="btn-icon" />
+            About Me
+          </button>
+          <button type="button" className="vs-button" onClick={() => openFile('contact.css')}>
+            <Codicon name="mail" className="btn-icon" />
+            Contact
+          </button>
+          <button type="button" className="vs-button" onClick={openChat}>
+            <Codicon name="comment-discussion" className="btn-icon" />
+            HenryAI
+          </button>
+        </div>
+
+        <div className="home-stats">
+          {profile.stats.map((s) => (
+            <div key={s.label} className="stat-box">
+              <div className="stat-value">{s.value}</div>
+              <div className="stat-label">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="home-footer">
+          {CONTENT.contact.links.map((l) => (
+            <a key={l.label} className="footer-link" style={chipVars(l.label)} href={l.href} target="_blank" rel="noreferrer">
+              <Codicon name={codiconForLink(l.label)} className="footer-icon" />
+              <span>{l.label}</span>
+            </a>
+          ))}
+          <a className="footer-link" style={chipVars('Email')} href={`mailto:${CONTENT.contact.email}`}>
+            <Codicon name={codiconForLink('Email')} className="footer-icon" />
+            <span>Email</span>
+          </a>
+        </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AboutView() {
+  const about = CONTENT.about
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+
+  const renderWithStrong = (text: string, strongText: string) => {
+    const idx = text.indexOf(strongText)
+    if (idx < 0) return text
+    const before = text.slice(0, idx)
+    const after = text.slice(idx + strongText.length)
+    return (
+      <>
+        {before}
+        <strong className="about-accent">{strongText}</strong>
+        {after}
+      </>
+    )
+  }
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+      <div ref={contentRef} className="about-page">
+        <div className="about-topline">{about.metaLine}</div>
+        <h1 className="about-title">{about.title}</h1>
+        <div className="about-subtitle">// {about.subtitle}</div>
+
+        <div className="about-grid">
+          <section className="about-card about-card-wide">
+            {about.intro.map((p) => (
+              <p key={p.text} className="about-paragraph">
+                {renderWithStrong(p.text, p.strong)}
+              </p>
+            ))}
+          </section>
+
+          <section className="about-card about-card-wide">
+            <h2 className="about-h2">{about.journeyTitle}</h2>
+            {about.journey.map((p) => (
+              <p key={p} className="about-paragraph">
+                {p}
+              </p>
+            ))}
+          </section>
+
+          <section className="about-card">
+            <h2 className="about-h2">{about.whatImDoingTitle}</h2>
+            <div className="about-servicegrid">
+              {about.services.map((s) => (
+                <div key={s.title} className="about-service">
+                  <div className="about-service-title">{s.title}</div>
+                  <div className="about-service-text">{s.text}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="about-card">
+            <h2 className="about-h2">{about.softSkillsTitle}</h2>
+            <ul className="about-list">
+              {about.softSkills.map((s) => (
+                <li key={s.title} className="about-li">
+                  <span className="about-li-strong">{s.title}:</span> <span>{s.text}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="about-card about-card-wide">
+            <h2 className="about-h2">{about.developerSkillsTitle}</h2>
+            <ul className="about-list">
+              {about.developerSkills.map((s) => (
+                <li key={s.label} className="about-li">
+                  <span className="about-li-strong">{s.label}:</span> <span>{s.value}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="about-card about-card-wide">
+            <h2 className="about-h2">{about.valuesTitle}</h2>
+            {about.values.map((p) => (
+              <p key={p} className="about-paragraph">
+                {p}
+              </p>
+            ))}
+          </section>
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+function SkillsView() {
+  const skills = CONTENT.skills
+  const about = CONTENT.about
+  const chips = Object.values(skills.skills).flat()
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+      <div ref={contentRef} className="skills-page">
+        <div className="skills-topline">// skills.json - developer skills ✨</div>
+        <h1 className="skills-title">Skills 🧠</h1>
+        <pre className="skills-meta" aria-label="Skills meta">
+          {'{ '}
+          <span className="tok tok-string">"status"</span>
+          {': '}
+          <span className="tok tok-string">"always_learning"</span>
+          {', '}
+          <span className="tok tok-string">"passion"</span>
+          {': '}
+          <span className="tok tok-string">"immeasurable"</span>
+          {' }'}
+        </pre>
+
+        <div className="skills-grid">
+          <section className="skills-card">
+            <h2 className="skills-h2">Skill Levels 📈</h2>
+            <div className="skills-bars">
+              {skills.stack.map((s) => (
+                <div key={s.name} className="skills-barrow">
+                  <div className="skills-barlabel">{s.name}</div>
+                  <div className="skills-bartrack" aria-hidden="true">
+                    <div className="skills-barfill" style={{ width: `${s.level}%` }} />
+                  </div>
+                  <div className="skills-barvalue">{s.level}%</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="skills-card">
+            <h2 className="skills-h2">Developer Skills 🧰</h2>
+            <ul className="skills-list">
+              {about.developerSkills.map((s) => (
+                <li key={s.label} className="skills-li">
+                  <span className="skills-li-strong">{s.label}:</span> <span>{s.value}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="skills-card skills-card-wide">
+            <h2 className="skills-h2">Also Familiar With ✨</h2>
+            <div className="skills-chips">
+              {chips.map((c, idx) => (
+                <span key={`${c}-${idx}`} className="skills-chip" style={chipVars(c)}>
+                  {c}
+                </span>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+function ResumeTimelineSection({
+  title,
+  items,
+}: {
+  title: string
+  items: readonly {
+    readonly period: string
+    readonly title: string
+    readonly company: string
+    readonly summary: string
+    readonly tags: readonly string[]
+  }[]
+}) {
+  return (
+    <section className="resume-section">
+      <h2 className="resume-h2">{title}</h2>
+      <div className="resume-timeline" role="list">
+        {items.map((it) => (
+          <article key={`${it.period}-${it.title}`} className="resume-item" role="listitem">
+            <div className="resume-dot" aria-hidden="true" />
+            <div className="resume-itembody">
+              <div className="resume-period">{it.period}</div>
+              <div className="resume-role">{it.title}</div>
+              <div className="resume-company">
+                <span className="resume-at" aria-hidden="true">
+                  @
+                </span>{' '}
+                {it.company}
+              </div>
+              <p className="resume-text">{it.summary}</p>
+              <div className="resume-tags" aria-label="Tags">
+                {it.tags.map((t) => (
+                  <span key={t} className="resume-tag" style={chipVars(t)}>
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ResumeView() {
+  const resume = CONTENT.resume
+  const stack = CONTENT.skills.stack
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+      <div ref={contentRef} className="resume-page">
+        <div className="resume-topline">{resume.metaLine}</div>
+        <h1 className="resume-title">{resume.title}</h1>
+        <div className="resume-subtitle">{resume.subtitle}</div>
+
+        <ResumeTimelineSection title={resume.experienceTitle} items={resume.experience} />
+        <ResumeTimelineSection title={resume.educationTitle} items={resume.education} />
+
+        <section className="resume-section">
+          <h2 className="resume-h2">{resume.stackTitle}</h2>
+          <div className="resume-bars">
+            {stack.map((s) => (
+              <div key={s.name} className="resume-barrow">
+                <div className="resume-barlabel">{s.name}</div>
+                <div className="resume-bartrack" aria-hidden="true">
+                  <div className="resume-barfill" style={{ width: `${s.level}%` }} />
+                </div>
+                <div className="resume-barvalue">{s.level}%</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+function PortfolioView() {
+  const portfolio = CONTENT.portfolio as PortfolioContent
+  const [filter, setFilter] = useState<PortfolioFilter>('All')
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+
+  const filtered = useMemo(() => {
+    if (filter === 'All') return portfolio.projects
+    return portfolio.projects.filter((p) => p.category === filter)
+  }, [filter, portfolio.projects])
+
+  const extractTags = (text: string) => {
+    const dictionary = [
+      { test: /\.net/i, tag: '.NET' },
+      { test: /c#/i, tag: 'C#' },
+      { test: /razor/i, tag: 'Razor Pages' },
+      { test: /sqlite/i, tag: 'SQLite' },
+      { test: /sql server/i, tag: 'SQL Server' },
+      { test: /react/i, tag: 'React' },
+      { test: /node\.js/i, tag: 'Node.js' },
+      { test: /express/i, tag: 'Express' },
+      { test: /mongodb/i, tag: 'MongoDB' },
+      { test: /api/i, tag: 'API' },
+      { test: /discord/i, tag: 'Discord' },
+      { test: /css/i, tag: 'CSS' },
+      { test: /flexbox/i, tag: 'Flexbox' },
+      { test: /\bgrid\b/i, tag: 'Grid' },
+    ] as const
+
+    const tags: string[] = []
+    dictionary.forEach(({ test, tag }) => {
+      if (test.test(text) && !tags.includes(tag)) tags.push(tag)
+    })
+    return tags.slice(0, 6)
+  }
+
+  const categoryAccent = (category: string) => {
+    if (category === 'Applications') return 'portfolio-accent-app'
+    if (category === 'Web Design') return 'portfolio-accent-design'
+    return 'portfolio-accent-dev'
+  }
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+      <div ref={contentRef} className="portfolio-page">
+        <div className="portfolio-topline">{portfolio.metaLine}</div>
+        <h1 className="portfolio-title">{portfolio.title}</h1>
+        <div className="portfolio-subtitle">{portfolio.subtitle}</div>
+
+        <div className="portfolio-controls" role="tablist" aria-label="Project filters">
+          {portfolio.filters.map((f) => (
+            <button
+              key={f}
+              className={`portfolio-pill${f === filter ? ' is-active' : ''}`}
+              onClick={() => setFilter(f)}
+              type="button"
+              role="tab"
+              aria-selected={f === filter}
+              style={f === 'All' ? undefined : chipVars(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <div className="portfolio-grid">
+          {filtered.map((p) => {
+            const tags = extractTags(p.description)
+            const live = p.live && p.live !== p.github ? p.live : undefined
+            return (
+              <article key={p.title} className={`portfolio-card ${categoryAccent(p.category)}`}>
+                <div className="portfolio-thumb" aria-hidden="true">
+                  {p.cover ? (
+                    <img className="portfolio-thumbimg" src={p.cover} alt={p.title} loading="lazy" />
+                  ) : (
+                    <div className="portfolio-thumbplaceholder" />
+                  )}
+                </div>
+                <div className="portfolio-cardhead">
+                  <div className="portfolio-meta">
+                    <div className="portfolio-kicker" style={chipVars(p.category)}>
+                      {p.category.toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="portfolio-actions" aria-label="Links">
+                    {p.github ? (
+                      <a className="portfolio-action" href={p.github} target="_blank" rel="noreferrer">
+                        GitHub
+                      </a>
+                    ) : null}
+                    {live ? (
+                      <a className="portfolio-action is-live" href={live} target="_blank" rel="noreferrer">
+                        Live
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+                <h3 className="portfolio-cardtitle">{p.title}</h3>
+                <p className="portfolio-cardtext">{p.description}</p>
+                {tags.length ? (
+                  <div className="portfolio-tags" aria-label="Tech">
+                    {tags.map((t) => (
+                      <span key={t} className="portfolio-tag" style={chipVars(t)}>
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            )
+          })}
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+function CertificationsView() {
+  const certifications = CONTENT.certifications as readonly CertificationItem[]
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+      <div ref={contentRef} className="certs-page">
+        <div className="certs-topline">// certifications.js - specializations & certificates ✨</div>
+        <h1 className="certs-title">Certifications 🏅</h1>
+        <div className="certs-subtitle">{'export const certifications = [...] // keep learning 🚀'}</div>
+
+        <div className="certs-grid">
+          {certifications.map((c) => (
+            <article key={`${c.year}-${c.title}`} className="certs-card">
+              <div className="certs-thumb" aria-hidden="true">
+                <img className="certs-thumbimg" src={c.cover} alt={c.title} loading="lazy" />
+              </div>
+              <div className="certs-meta">
+                <span className="certs-category" style={chipVars(c.category)}>
+                  {c.category}
+                </span>
+                <span className="certs-dot" aria-hidden="true" />
+                <span className="certs-year">{c.year}</span>
+              </div>
+              <h3 className="certs-cardtitle">{c.title}</h3>
+              <p className="certs-cardtext">{c.description}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+function BlogView() {
+  const posts = CONTENT.blogPosts as readonly BlogPostItem[]
+  const [selected, setSelected] = useState<BlogPostItem | null>(null)
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+
+  useEffect(() => {
+    if (!selected) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setSelected(null)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selected])
+
+  type BlogBodyKey =
+    | 'ai'
+    | 'cloud'
+    | 'mobile'
+    | 'performance'
+    | 'testing'
+    | 'security'
+    | 'database'
+    | 'frontend'
+    | 'css'
+    | 'react'
+    | 'architecture'
+    | 'backend'
+    | 'tech'
+    | 'design'
+
+  const bodyKeyForPost = (post: BlogPostItem): BlogBodyKey => {
+    const category = post.category.trim().toLowerCase()
+    const title = post.title.trim().toLowerCase()
+
+    if (category === 'ai' || title.includes("l'impatto dell'ai")) return 'ai'
+    if (category.includes('cloud') || category.includes('devops') || title.includes('serverless') || title.includes('kubernetes'))
+      return 'cloud'
+    if (category.includes('mobile') || title.includes('flutter') || title.includes('react native')) return 'mobile'
+    if (category.includes('performance') || title.includes('core web vitals') || title.includes('webassembly') || title.includes('edge computing'))
+      return 'performance'
+    if (category.includes('testing')) return 'testing'
+    if (category.includes('security') || title.includes('api sicure') || title.includes('cybersecurity')) return 'security'
+    if (category.includes('database') || title.includes('database')) return 'database'
+    if (category.includes('css') || title.includes('tailwind')) return 'css'
+    if (category.includes('react') || title.includes('next.js')) return 'react'
+    if (category.includes('ui/ux') || title.includes('design system')) return 'design'
+    if (category.includes('architecture') || title.includes('micro frontend')) return 'architecture'
+    if (category.includes('backend') || title.includes('deno') || title.includes('node.js')) return 'backend'
+    if (category.includes('frontend')) return 'frontend'
+    if (category.includes('tech trends')) return 'tech'
+    return 'tech'
+  }
+
+  const renderBody = (post: BlogPostItem) => {
+    const key = bodyKeyForPost(post)
+
+    const closing = (
+      <>
+        <h4>Takeaway</h4>
+        <ul>
+          <li>Chiarisci obiettivo e vincoli prima di scegliere strumenti e architettura.</li>
+          <li>Misura (metriche) e automatizza (pipeline) per mantenere qualità e velocità nel tempo.</li>
+          <li>Riduci complessità: poche regole, pattern coerenti, documentazione minima ma utile.</li>
+        </ul>
+      </>
+    )
+
+    if (key === 'css') {
+      return (
+        <>
+          <h4>Perché questo argomento conta</h4>
+          <p>
+            {post.title} nasce sempre da un bisogno pratico: spedire UI consistenti e mantenibili senza trasformare il CSS in un
+            campo minato. Con Tailwind (o con un set di utility ben progettato) puoi ridurre la variabilità, velocizzare i layout e
+            standardizzare le decisioni di design.
+          </p>
+
+          <h4>Strategia: utility-first senza caos</h4>
+          <p>
+            Il punto non è “scrivere zero CSS”, ma spostare la complessità in convenzioni: spacing coerenti, palette, typography scale,
+            breakpoint, componenti composabili. Più il progetto cresce, più vince chi ha regole semplici e ripetibili.
+          </p>
+          <ul>
+            <li>Definisci una scala di spacing e usala sempre (padding/margin/gap).</li>
+            <li>Evita classi arbitrarie ovunque: usale solo quando serve davvero.</li>
+            <li>Raggruppa pattern ripetuti in componenti (Button, Card, Input, Badge).</li>
+          </ul>
+
+          <h4>Trucchi pratici (che fanno davvero la differenza)</h4>
+          <ul>
+            <li>Layout: combina grid e flex con gap invece di margin “a mano”.</li>
+            <li>Responsive: parti mobile-first e aggiungi breakpoint solo dove il layout lo richiede.</li>
+            <li>Stati: standardizza hover/focus/disabled per accessibilità e coerenza.</li>
+            <li>Dark mode: definisci token e usa varianti in modo sistematico.</li>
+          </ul>
+
+          <h4>Performance e DX</h4>
+          <p>
+            Un setup sano evita bundle gonfi e classi inutilizzate: assicurati che la build elimini ciò che non serve, e che l&apos;editor
+            ti aiuti con autocomplete e linting. Il risultato è velocità percepita migliore e sviluppo più fluido.
+          </p>
+
+          <h4>Checklist per un progetto reale</h4>
+          <ul>
+            <li>Palette, spacing, font e radius definiti come standard.</li>
+            <li>Componenti base (button/input/card) riusati ovunque.</li>
+            <li>Regole per varianti e stati (success/error/loading).</li>
+            <li>Revisione periodica per evitare duplicazioni e classi “one-off”.</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'react') {
+      return (
+        <>
+          <h4>Obiettivo</h4>
+          <p>
+            In {post.title} l&apos;idea centrale è semplice: rendere l&apos;app più veloce e più facile da mantenere usando strategie moderne di
+            rendering, caching e data fetching. Il guadagno non è solo tecnico: è anche UX (tempi, fluidità, stabilità).
+          </p>
+
+          <h4>Rendering e data fetching: cosa scegliere</h4>
+          <ul>
+            <li>Rendering lato server quando SEO e first load sono prioritari.</li>
+            <li>Rendering client quando l&apos;interattività e i dati “live” dominano l&apos;esperienza.</li>
+            <li>Incremental/partial rendering per pagine grandi con parti indipendenti.</li>
+          </ul>
+
+          <h4>Ottimizzazioni ad alto impatto</h4>
+          <ul>
+            <li>Riduci JS iniziale: code splitting mirato sulle route e sui componenti pesanti.</li>
+            <li>Immagini: dimensioni giuste, lazy loading, priorità alle “hero”.</li>
+            <li>Cache: invalida bene e osserva i pattern di traffico reali.</li>
+            <li>Stato: mantieni locale ciò che è locale, sincronizza solo ciò che serve.</li>
+          </ul>
+
+          <h4>Misurare (non intuire)</h4>
+          <p>
+            Usa metriche e tracing: il collo di bottiglia raramente è dove lo immagini. Misura TTFB, LCP, CLS, INP e il costo reale delle
+            richieste. Ogni ottimizzazione deve essere verificabile.
+          </p>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'frontend') {
+      return (
+        <>
+          <h4>Contesto</h4>
+          <p>
+            {post.title} riguarda un tema ricorrente: come costruire UI reattive e semplici da evolvere. Che si parli di HTMX, Svelte o state
+            management, l&apos;obiettivo è ridurre complessità senza perdere qualità.
+          </p>
+
+          <h4>Pattern che funzionano</h4>
+          <ul>
+            <li>Componenti piccoli e “puri”: più sono prevedibili, più scalano.</li>
+            <li>Stato vicino a dove serve: evita store globali per tutto.</li>
+            <li>Contratti chiari: props e eventi coerenti, naming consistente.</li>
+            <li>Accessibilità: focus, aria-label, tab order sempre considerati.</li>
+          </ul>
+
+          <h4>Decisioni da prendere presto</h4>
+          <ul>
+            <li>Struttura del progetto (feature-based vs layer-based).</li>
+            <li>Convenzioni UI (spacing, typography, component library).</li>
+            <li>Strategia di fetching (cache, retry, error state).</li>
+            <li>Regole per performance (lazy, memo, list virtualization quando serve).</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'design') {
+      return (
+        <>
+          <h4>Design System: il problema che risolve</h4>
+          <p>
+            Un design system non è una collezione di componenti: è un contratto tra design e engineering. Serve per ridurre ambiguità,
+            standardizzare le decisioni e rendere le UI consistenti anche quando i team crescono.
+          </p>
+
+          <h4>Mattoni fondamentali</h4>
+          <ul>
+            <li>Token: colori, spacing, typography, radius e shadow.</li>
+            <li>Componenti base: Button, Input, Card, Modal, Tooltip.</li>
+            <li>Pattern: form validation, empty state, loading state.</li>
+            <li>Documentazione: esempi d&apos;uso e “do / don&apos;t”.</li>
+          </ul>
+
+          <h4>Governance (la parte che viene ignorata)</h4>
+          <p>
+            Senza regole di evoluzione, il sistema si frammenta. Definisci ownership, processi di review, versioning e una roadmap. La coerenza
+            si difende con disciplina, non con buona volontà.
+          </p>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'security') {
+      return (
+        <>
+          <h4>Threat model prima di tutto</h4>
+          <p>
+            {post.title} parte sempre da una domanda: cosa stiamo proteggendo e da chi? Senza threat model si finisce a “mettere toppe” invece di
+            progettare sicurezza.
+          </p>
+
+          <h4>Fondamentali per web app e API</h4>
+          <ul>
+            <li>Validazione input + output encoding (difesa contro XSS e injection).</li>
+            <li>Auth solida (scadenze, refresh, rotazione token) e autorizzazione per risorsa.</li>
+            <li>Rate limit e protezione brute force.</li>
+            <li>Logging utile ma senza dati sensibili.</li>
+            <li>Headers e policy: CSP, HSTS, SameSite cookie, CORS ragionato.</li>
+          </ul>
+
+          <h4>Processo: sicurezza come pratica continua</h4>
+          <ul>
+            <li>Dipendenze: scansioni e aggiornamenti regolari.</li>
+            <li>Pipeline: test automatici + controlli di sicurezza.</li>
+            <li>Incident response: playbook minimo per eventi reali.</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'database') {
+      return (
+        <>
+          <h4>Scelta del database: non è una guerra di religione</h4>
+          <p>
+            {post.title} si traduce spesso in una decisione architetturale: schema rigido e query complesse, oppure flessibilità e scalabilità
+            orizzontale? La risposta dipende dai dati e dai carichi reali.
+          </p>
+
+          <h4>Criteri pratici</h4>
+          <ul>
+            <li>Modello dati: relazioni forti vs documenti indipendenti.</li>
+            <li>Query: join, aggregazioni, reporting.</li>
+            <li>Consistenza: transazioni, vincoli, integrità.</li>
+            <li>Operatività: backup, osservabilità, costi, competenze del team.</li>
+          </ul>
+
+          <h4>Serverless database: opportunità e rischi</h4>
+          <p>
+            Il pay-per-use è ottimo quando il traffico è variabile, ma va capito bene il modello di pricing e le limitazioni. Misura, stima e
+            imposta guardrail (limiti, alert, caching) prima che arrivi la prima sorpresa in fattura.
+          </p>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'cloud') {
+      return (
+        <>
+          <h4>Architetture cloud “che reggono”</h4>
+          <p>
+            {post.title} racconta un passaggio tipico: dalla singola app al sistema distribuito. Il cloud ti dà scalabilità, ma la complessità va
+            gestita con disciplina.
+          </p>
+
+          <h4>Serverless e container: quando scegliere cosa</h4>
+          <ul>
+            <li>Serverless: eventi, picchi, workload intermittenti, time-to-market.</li>
+            <li>Container/Kubernetes: controllo fine, workload persistenti, piattaforme interne.</li>
+            <li>Ibrido: la soluzione più comune in prodotti reali.</li>
+          </ul>
+
+          <h4>Operatività (DevOps reale)</h4>
+          <ul>
+            <li>Osservabilità: log, metriche, tracing con correlation id.</li>
+            <li>Deploy sicuri: canary, rollback, feature flag.</li>
+            <li>Config e segreti: separati dal codice, rotazione e auditing.</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'performance') {
+      return (
+        <>
+          <h4>Performance: una somma di dettagli</h4>
+          <p>
+            {post.title} riguarda un principio semplice: la velocità percepita è UX. Non basta “ottimizzare”: serve una strategia fatta di
+            misurazioni, budget e interventi mirati.
+          </p>
+
+          <h4>Le leve principali</h4>
+          <ul>
+            <li>Riduci lavoro sul main thread: meno JS iniziale, meno re-render inutili.</li>
+            <li>Immagini e font: compressione, dimensioni, preload ragionato.</li>
+            <li>Cache: HTTP cache, service worker dove ha senso, CDN.</li>
+            <li>Server: TTFB basso con query ottimizzate e caching lato backend.</li>
+          </ul>
+
+          <h4>Checklist rapida</h4>
+          <ul>
+            <li>Budget per LCP/INP/CLS e monitoraggio continuo.</li>
+            <li>Code splitting e lazy dove davvero impatta.</li>
+            <li>Evita regressioni: performance test in CI sulle pagine critiche.</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'testing') {
+      return (
+        <>
+          <h4>Testing end-to-end che non rallenta il team</h4>
+          <p>
+            {post.title} punta a una cosa: ridurre bug in produzione senza trasformare la suite in un collo di bottiglia. E2E non sostituisce
+            unit e integration: li completa.
+          </p>
+
+          <h4>Piramide dei test (pratica)</h4>
+          <ul>
+            <li>Unit: veloci, tanti, su logica pura.</li>
+            <li>Integration: API e DB, meno numerosi ma significativi.</li>
+            <li>E2E: pochi scenari critici (login, checkout, flussi core).</li>
+          </ul>
+
+          <h4>Stabilità prima di quantità</h4>
+          <ul>
+            <li>Dati test deterministici e ambienti isolati.</li>
+            <li>Selector robusti e page object dove serve.</li>
+            <li>Screenshot e trace solo quando fallisce (rumore minimo).</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'architecture') {
+      return (
+        <>
+          <h4>Architettura: scalare team e delivery</h4>
+          <p>
+            {post.title} parla di una sfida comune: la UI cresce e il monolite diventa lento da cambiare. Micro frontend può aiutare, ma va
+            introdotto con cautela e obiettivi chiari.
+          </p>
+
+          <h4>Quando ha senso</h4>
+          <ul>
+            <li>Team indipendenti con roadmap diverse e rilasci frequenti.</li>
+            <li>Domini funzionali separabili con confini chiari.</li>
+            <li>Necessità di evitare “big bang release”.</li>
+          </ul>
+
+          <h4>Rischi tipici</h4>
+          <ul>
+            <li>Duplicazione di dipendenze e bundle più grandi.</li>
+            <li>Inconsistenza UI senza design system.</li>
+            <li>Debug e observability più complessi.</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'backend') {
+      return (
+        <>
+          <h4>Runtime moderni: cosa cambia davvero</h4>
+          <p>
+            {post.title} non è una gara di performance: è una scelta di ecosistema, sicurezza e DX. La domanda corretta è “cosa serve al mio
+            prodotto e al mio team?”.
+          </p>
+
+          <h4>Punti di confronto utili</h4>
+          <ul>
+            <li>Sicurezza: permission model, dipendenze, auditing.</li>
+            <li>Tooling: bundling, test runner, dev server.</li>
+            <li>Compatibilità: librerie, runtime API, deploy target.</li>
+            <li>Operatività: observability e debugging.</li>
+          </ul>
+
+          <h4>Scelta pragmatica</h4>
+          <p>
+            Se il progetto vive di librerie Node, la compatibilità è un valore enorme. Se invece vuoi un runtime più integrato (tooling incluso) e
+            un approccio più “secure-by-default”, Deno/Bun possono diventare molto interessanti.
+          </p>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'ai') {
+      return (
+        <>
+          <h4>AI nello sviluppo: dove porta valore</h4>
+          <p>
+            {post.title} è un tema attualissimo: l&apos;AI accelera, ma non sostituisce il ragionamento. Funziona bene su task ripetitivi (boilerplate,
+            refactor guidati, test scaffolding), meno su decisioni architetturali non formalizzate.
+          </p>
+
+          <h4>Use case concreti</h4>
+          <ul>
+            <li>Assistenza su debugging e comprensione del codice.</li>
+            <li>Generazione di test e casi limite.</li>
+            <li>Documentazione “living” da snippet e API.</li>
+            <li>Automazioni in CI (lint, diff review, changelog).</li>
+          </ul>
+
+          <h4>Guardrail</h4>
+          <ul>
+            <li>Mai inserire segreti o dati sensibili nei prompt.</li>
+            <li>Validare sempre output con test e code review.</li>
+            <li>Standardizzare lo stile e le convenzioni del progetto.</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    if (key === 'tech') {
+      return (
+        <>
+          <h4>Trend: separare hype da valore</h4>
+          <p>
+            {post.title} è un invito alla lucidità: le tecnologie emergenti hanno senso quando risolvono un problema reale (costi, time-to-market,
+            qualità, scalabilità) e quando il team può sostenerle.
+          </p>
+
+          <h4>Come valutare una tecnologia</h4>
+          <ul>
+            <li>Maturità: community, documentazione, stabilità.</li>
+            <li>Compatibilità: stack esistente, integrazioni, migrazioni.</li>
+            <li>Costo: complessità, operatività, onboarding.</li>
+            <li>Rischio: lock-in, vendor, ecosistema.</li>
+          </ul>
+          {closing}
+        </>
+      )
+    }
+
+    return closing
+  }
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+      <div ref={contentRef} className="blog-page">
+        <div className="blog-topline">{'<!-- blog.html · posts ✨ -->'}</div>
+        <h1 className="blog-title">Blog ✍️</h1>
+        <div className="blog-subtitle">{'<section class="blog-posts">…</section>'}</div>
+
+        <div className="blog-grid">
+          {posts.map((p) => (
+            <article
+              key={`${p.dateISO}-${p.title}`}
+              className="blog-card blog-card-click"
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelected(p)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSelected(p)
+                }
+              }}
+            >
+              <div className="blog-thumb" aria-hidden="true">
+                <img className="blog-thumbimg" src={p.cover} alt={p.title} loading="lazy" />
+              </div>
+              <div className="blog-meta">
+                    <span className="blog-category" style={chipVars(p.category)}>
+                      {p.category}
+                    </span>
+                <span className="blog-dot" aria-hidden="true" />
+                <time className="blog-date" dateTime={p.dateISO}>
+                  {p.dateLabel}
+                </time>
+              </div>
+              <h3 className="blog-cardtitle">{p.title}</h3>
+              <p className="blog-cardtext">{p.excerpt}</p>
+            </article>
+          ))}
+        </div>
+
+        {selected ? (
+          <div
+            className="blog-modal-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={selected.title}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setSelected(null)
+            }}
+          >
+            <div className="blog-modal">
+              <button type="button" className="blog-modal-close" onClick={() => setSelected(null)} aria-label="Close">
+                <Codicon name="close" />
+              </button>
+              <div className="blog-modal-hero" aria-hidden="true">
+                <img className="blog-modal-heroimg" src={selected.cover} alt={selected.title} loading="lazy" />
+              </div>
+              <div className="blog-modal-pad">
+                <div className="blog-modal-meta">
+                          <span className="blog-modal-category" style={chipVars(selected.category)}>
+                            {selected.category}
+                          </span>
+                  <span className="blog-dot" aria-hidden="true" />
+                  <time className="blog-date" dateTime={selected.dateISO}>
+                    {selected.dateLabel}
+                  </time>
+                </div>
+                <h2 className="blog-modal-title">{selected.title}</h2>
+                <div className="blog-modal-body">
+                  <p className="blog-modal-lead">{selected.excerpt}</p>
+                  {renderBody(selected)}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      </div>
+    </div>
+  )
+}
+
+function ContactView() {
+  const contact = CONTENT.contact
+  const socials = [
+    { label: 'Email', value: contact.email, href: `mailto:${contact.email}`, icon: 'mail' },
+    ...contact.links.map((l) => {
+      const k = l.label.trim().toLowerCase()
+      const icon =
+        k === 'github' ? 'github' : k === 'linkedin' ? 'account' : k === 'whatsapp' ? 'comment-discussion' : 'link'
+      return { label: l.label, value: l.href.replace(/^https?:\/\//, ''), href: l.href, icon }
+    }),
+  ] as const
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+      <div ref={contentRef} className="contact-page">
+        <div className="contact-topline">/* contact.css · let&apos;s build something ✨ */</div>
+        <h1 className="contact-title">Contact 💬</h1>
+        <div className="contact-subtitle">// open to work, collabs & good conversations 🤝</div>
+
+        <div className="contact-grid">
+          <section className="contact-col">
+            <h2 className="contact-h2">FIND ME ON 📍</h2>
+            <div className="contact-links">
+              {socials.map((s) => (
+                <a
+                  key={s.label}
+                  className="contact-linkcard"
+                  style={chipVars(s.label)}
+                  href={s.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span className="contact-iconbox" aria-hidden="true">
+                    <Codicon name={s.icon} />
+                  </span>
+                  <span className="contact-linkmeta">
+                    <span className="contact-linklabel">{s.label.toUpperCase()}</span>
+                    <span className="contact-linkvalue">{s.value}</span>
+                  </span>
+                  <span className="contact-linkchev" aria-hidden="true">
+                    <Codicon name="chevron-right" />
+                  </span>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          <section className="contact-col">
+            <h2 className="contact-h2">SEND A MESSAGE ✉️</h2>
+            <form className="contact-form" action="https://formspree.io/f/mpwwpgzr" method="POST">
+              <label className="contact-field">
+                <span className="contact-label">// YOUR_NAME *</span>
+                <input className="contact-input" name="name" type="text" placeholder="string" required />
+              </label>
+              <label className="contact-field">
+                <span className="contact-label">// YOUR_EMAIL *</span>
+                <input className="contact-input" name="email" type="email" placeholder="string" required />
+              </label>
+              <label className="contact-field">
+                <span className="contact-label">// SUBJECT</span>
+                <input className="contact-input" name="subject" type="text" placeholder="string" />
+              </label>
+              <label className="contact-field">
+                <span className="contact-label">// MESSAGE *</span>
+                <textarea
+                  className="contact-textarea"
+                  name="message"
+                  placeholder={'"your message"'}
+                  required
+                />
+              </label>
+              <button className="contact-send" type="submit">
+                <Codicon name="send" className="btn-icon" />
+                Send message()
+              </button>
+              <div className="contact-powered">// Powered by Formspree (lands directly in my inbox)</div>
+            </form>
+          </section>
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+function PdfView() {
+  const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
+  const pdfName = 'Henry G. | Full Stack Developer.pdf'
+  const pdfHref = `/${encodeURIComponent(pdfName)}`
+
+  return (
+    <div className="editor-scroll editor-lines" style={{ ['--editorLineHeight' as never]: `${lineHeightPx}px` }}>
+      <div className="editor-gutter" style={{ paddingTop: `${padTopPx}px`, paddingBottom: `${padBottomPx}px` }} aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="editor-ln">
+            {String(idx + 1).padStart(2, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="editor-lines-content">
+        <div ref={contentRef} className="pdf-view">
+          <div className="pdf-title">
+            <Codicon name="file-pdf" className="btn-icon" /> Resume.pdf ✨
+          </div>
+          <div className="pdf-body">
+            <p>
+              Metti il tuo CV in <span className="inline-code">public/{pdfName}</span> e poi puoi aprirlo/scaricarlo da qui.
+            </p>
+            <div className="pdf-actions">
+              <a className="link" style={chipVars('PDF')} href={pdfHref} target="_blank" rel="noreferrer">
+                Apri /{pdfName} ↗
+              </a>
+              <a className="link" style={chipVars('Download')} href={pdfHref} download={pdfName}>
+                Download ⬇︎
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CodeView({ lines }: { lines: CodeLine[] }) {
+  return (
+    <div className="editor-scroll">
+      <pre className="code">
+        {lines.map((l, idx) => (
+          <div key={idx} className="code-line">
+            <span className="ln">{String(idx + 1).padStart(2, ' ')}</span>
+            <span className={`tok tok-${l.tone ?? 'plain'}`}>{l.content}</span>
+          </div>
+        ))}
+      </pre>
+    </div>
+  )
+}
+
+function QuickOpen({
+  open,
+  query,
+  setQuery,
+  items,
+  selectedIndex,
+  setSelectedIndex,
+  onSelect,
+  onClose,
+}: {
+  open: boolean
+  query: string
+  setQuery: (v: string) => void
+  items: FileEntry[]
+  selectedIndex: number
+  setSelectedIndex: (v: number) => void
+  onSelect: (id: FileId) => void
+  onClose: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    inputRef.current?.focus()
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSelectedIndex(clamp(selectedIndex + 1, 0, Math.max(0, items.length - 1)))
+        return
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSelectedIndex(clamp(selectedIndex - 1, 0, Math.max(0, items.length - 1)))
+        return
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        const item = items[selectedIndex]
+        if (item) onSelect(item.id)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [items, onClose, onSelect, open, selectedIndex, setSelectedIndex])
+
+  if (!open) return null
+
+  return (
+    <div className="quickopen-overlay" role="dialog" aria-modal="true">
+      <div className="quickopen">
+        <div className="quickopen-inputrow">
+          <span className="quickopen-prefix">&gt;</span>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setSelectedIndex(0)
+            }}
+            className="quickopen-input"
+            placeholder="Type to search files"
+          />
+        </div>
+        <div className="quickopen-list" role="listbox">
+          {items.length === 0 ? (
+            <div className="quickopen-empty">No results</div>
+          ) : (
+            items.map((f, idx) => (
+              <button
+                key={f.id}
+                type="button"
+                className={`quickopen-item ${idx === selectedIndex ? 'active' : ''}`}
+                onMouseEnter={() => setSelectedIndex(idx)}
+                onClick={() => onSelect(f.id)}
+              >
+                <FileIcon ext={f.ext} />
+                <span className="quickopen-label">{f.label}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  const allFiles = FILE_TREE.children
+
+  const [activeActivity, setActiveActivity] = useState<ActivityId>('explorer')
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(true)
+  const desktopRef = useRef<HTMLDivElement | null>(null)
+  const cursorRef = useRef<HTMLDivElement | null>(null)
+  const [isCursorVisible, setIsCursorVisible] = useState(false)
+  const [isCursorHover, setIsCursorHover] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(300)
+  const [chatWidth, setChatWidth] = useState(360)
+  const resizeRef = useRef<{ kind: 'chat' | 'sidebar'; startX: number; startWidth: number } | null>(null)
+  const [isOpenEditorsOpen, setIsOpenEditorsOpen] = useState(true)
+  const [isPortfolioOpen, setIsPortfolioOpen] = useState(true)
+  const [isOutlineOpen, setIsOutlineOpen] = useState(false)
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
+
+  const [openTabs, setOpenTabs] = useState<FileId[]>(['home.tsx'])
+  const [activeTab, setActiveTab] = useState<FileId>('home.tsx')
+
+  const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false)
+  const [quickOpenQuery, setQuickOpenQuery] = useState('')
+  const [quickOpenSelectedIndex, setQuickOpenSelectedIndex] = useState(0)
+  const [now, setNow] = useState(() => new Date())
+  const initialChatState = useMemo(() => loadChatStateFromStorage(), [])
+  const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatState.threads)
+  const [activeChatThreadId, setActiveChatThreadId] = useState<string>(initialChatState.activeThreadId)
+  const activeChatThreadIdRef = useRef(activeChatThreadId)
+  const chatMessagesRef = useRef<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatIsSending, setChatIsSending] = useState(false)
+  const [chatError, setChatError] = useState<string | null>(null)
+  const chatEndRef = useRef<HTMLDivElement | null>(null)
+  const [terminalEntries, setTerminalEntries] = useState<TerminalEntry[]>(() => [
+    { id: chatId(), kind: 'out', text: 'VITE ready — Local: http://localhost:5173/' },
+    { id: chatId(), kind: 'out', text: 'Tip: Cmd/Ctrl+P per Quick Open · Cmd/Ctrl+` per Terminal' },
+    { id: chatId(), kind: 'out', text: "Welcome! Type 'help' to see available commands." },
+  ])
+  const terminalEntriesRef = useRef<TerminalEntry[]>([])
+  const [terminalInput, setTerminalInput] = useState('')
+  const [terminalCwd, setTerminalCwd] = useState('~/henrydev.it')
+  const [terminalHistory, setTerminalHistory] = useState<string[]>([])
+  const [terminalHistoryIndex, setTerminalHistoryIndex] = useState(-1)
+  const terminalInputRef = useRef<HTMLInputElement | null>(null)
+  const terminalEndRef = useRef<HTMLDivElement | null>(null)
+  const terminalScrollRef = useRef<HTMLDivElement | null>(null)
+
+  const activeFile = useMemo(() => {
+    return allFiles.find((f) => f.id === activeTab)
+  }, [activeTab, allFiles])
+
+  const quickOpenItems = useMemo(() => {
+    const q = quickOpenQuery.trim().toLowerCase()
+    if (!q) return allFiles
+    return allFiles.filter((f) => f.label.toLowerCase().includes(q))
+  }, [allFiles, quickOpenQuery])
+
+  const activeChatThread = useMemo(() => {
+    return chatThreads.find((t) => t.id === activeChatThreadId) ?? chatThreads[0]!
+  }, [activeChatThreadId, chatThreads])
+
+  const chatMessages = activeChatThread.messages
+
+  const openFile = (id: FileId) => {
+    setOpenTabs((tabs) => (tabs.includes(id) ? tabs : [...tabs, id]))
+    setActiveTab(id)
+  }
+
+  const closeTab = (id: FileId) => {
+    setOpenTabs((tabs) => {
+      const idx = tabs.indexOf(id)
+      const nextTabs = tabs.filter((t) => t !== id)
+
+      if (id === activeTab) {
+        const nextActive = nextTabs[idx] ?? nextTabs[idx - 1] ?? 'home.tsx'
+        setActiveTab(nextActive)
+      }
+
+      return nextTabs.length === 0 ? ['home.tsx'] : nextTabs
+    })
+  }
+
+  useEffect(() => {
+    activeChatThreadIdRef.current = activeChatThreadId
+  }, [activeChatThreadId])
+
+  const chatThreadsRef = useRef(chatThreads)
+  useEffect(() => {
+    chatThreadsRef.current = chatThreads
+  }, [chatThreads])
+
+  useEffect(() => {
+    chatMessagesRef.current = chatMessages
+  }, [chatMessages])
+
+  useEffect(() => {
+    saveChatStateToStorage(chatThreads, activeChatThreadId)
+  }, [activeChatThreadId, chatThreads])
+
+  useEffect(() => {
+    terminalEntriesRef.current = terminalEntries
+  }, [terminalEntries])
+
+  useEffect(() => {
+    if (!isChatOpen) return
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [chatMessages, chatIsSending, isChatOpen])
+
+  useEffect(() => {
+    if (!isTerminalOpen) return
+    terminalInputRef.current?.focus()
+    const el = terminalScrollRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [isTerminalOpen, terminalEntries])
+
+  const closeChatThread = (id: string) => {
+    const activeId = activeChatThreadIdRef.current
+    setChatThreads((prev) => {
+      const idx = prev.findIndex((t) => t.id === id)
+      const next = prev.filter((t) => t.id !== id)
+
+      if (next.length === 0) {
+        const t = createChatThread('Chat 1', [])
+        setActiveChatThreadId(t.id)
+        return [t]
+      }
+
+      if (activeId === id) {
+        const fallback = next[idx] ?? next[idx - 1] ?? next[0]!
+        setActiveChatThreadId(fallback.id)
+      }
+
+      return next
+    })
+  }
+
+  const resetChat = () => {
+    const nextIndex = chatThreads.length + 1
+    const nextThread = createChatThread(`Chat ${nextIndex}`, [])
+    setChatThreads((prev) => prev.slice(-Math.max(0, CHAT_MAX_SAVED_THREADS - 1)).concat(nextThread))
+    setActiveChatThreadId(nextThread.id)
+    setChatInput('')
+    setChatError(null)
+  }
+
+  const sendChat = async (text: string) => {
+    const content = text.trim()
+    if (!content) return
+    if (chatIsSending) return
+
+    setChatError(null)
+    setChatIsSending(true)
+
+    const threadId = activeChatThreadIdRef.current
+    const baseMessages = chatThreadsRef.current.find((t) => t.id === threadId)?.messages ?? []
+
+    const userMsg: ChatMessage = { id: chatId(), role: 'user', content }
+    const nextMessages = [...baseMessages, userMsg]
+    const windowedMessages = nextMessages.slice(-12)
+    setChatThreads((prev) =>
+      prev.map((t) => {
+        if (t.id !== threadId) return t
+        return { ...t, messages: nextMessages.slice(-CHAT_MAX_SAVED_MESSAGES), updatedAt: Date.now() }
+      }),
+    )
+    setChatInput('')
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: windowedMessages.map((m) => ({ role: m.role, content: m.content })),
+          context: buildHenryAISiteContext(),
+        }),
+      })
+
+      const data = (await res.json().catch(() => null)) as null | { content?: string; error?: string }
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`)
+
+      const assistantMsg: ChatMessage = {
+        id: chatId(),
+        role: 'assistant',
+        content: (data?.content || '').trim() || 'Non sono riuscito a generare una risposta. Riprova.',
+      }
+      setChatThreads((prev) =>
+        prev.map((t) => {
+          if (t.id !== threadId) return t
+          return { ...t, messages: [...t.messages, assistantMsg].slice(-CHAT_MAX_SAVED_MESSAGES), updatedAt: Date.now() }
+        }),
+      )
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Errore durante la richiesta. Riprova tra poco.'
+      setChatError(message)
+      const errMsg: ChatMessage = { id: chatId(), role: 'assistant', content: 'Ops, qualcosa è andato storto. Puoi riprovare?' }
+      setChatThreads((prev) =>
+        prev.map((t) => {
+          if (t.id !== threadId) return t
+          return { ...t, messages: [...t.messages, errMsg].slice(-CHAT_MAX_SAVED_MESSAGES), updatedAt: Date.now() }
+        }),
+      )
+    } finally {
+      setChatIsSending(false)
+    }
+  }
+
+  const appendTerminal = (kind: TerminalEntryKind, lines: string[]) => {
+    if (lines.length === 0) return
+    setTerminalEntries((prev) => [...prev, ...lines.map((t) => ({ id: chatId(), kind, text: t }))])
+  }
+
+  const resolveFileId = (input: string): FileId | null => {
+    const needle = input.trim()
+    if (!needle) return null
+    const byId = allFiles.find((f) => f.id === needle)
+    if (byId) return byId.id
+    const byLabel = allFiles.find((f) => f.label.toLowerCase() === needle.toLowerCase())
+    return byLabel ? byLabel.id : null
+  }
+
+  const execTerminal = async (raw: string) => {
+    const line = raw.trim()
+    if (!line) return
+
+    const cwdAtStart = terminalCwd
+    setTerminalEntries((prev) => [...prev, { id: chatId(), kind: 'cmd', text: line, cwd: cwdAtStart }])
+    setTerminalHistory((prev) => [...prev, line])
+    setTerminalHistoryIndex(-1)
+
+    const args = parseShellArgs(line)
+    const cmd = (args[0] || '').toLowerCase()
+    const rest = args.slice(1)
+
+    if (cmd === 'clear' || cmd === 'cls') {
+      setTerminalEntries([])
+      return
+    }
+
+    if (cmd === 'help') {
+      appendTerminal('out', [
+        'Comandi disponibili:',
+        '- help',
+        '- clear',
+        '- ls | tree',
+        '- open <file> | code <file>',
+        '- cat <file>',
+        '- pwd | cd <path>',
+        '- echo <text>',
+        '- date',
+        '- whoami',
+        '- henryai (apre la chat)',
+        '- npm run dev | npm run build',
+        '- git status',
+      ])
+      return
+    }
+
+    if (cmd === 'pwd') {
+      appendTerminal('out', [terminalCwd.replace(/^~\//, '/workspace/')])
+      return
+    }
+
+    if (cmd === 'cd') {
+      const target = (rest[0] || '').trim()
+      if (!target || target === '~' || target === '~/henrydev.it') {
+        setTerminalCwd('~/henrydev.it')
+        return
+      }
+      if (target === '..') {
+        setTerminalCwd('~/henrydev.it')
+        return
+      }
+      if (target === 'src') {
+        setTerminalCwd('~/henrydev.it/src')
+        return
+      }
+      appendTerminal('err', [`cd: no such file or directory: ${target}`])
+      return
+    }
+
+    if (cmd === 'ls') {
+      const base =
+        terminalCwd.endsWith('/src')
+          ? ['App.tsx', 'App.css', 'index.css', 'main.tsx', 'assets/']
+          : ['src/', 'public/', 'index.html', 'package.json', 'vite.config.ts', 'README.md']
+      appendTerminal('out', base)
+      return
+    }
+
+    if (cmd === 'tree') {
+      appendTerminal('out', [
+        '.',
+        '├── src',
+        '│   ├── App.tsx',
+        '│   ├── App.css',
+        '│   ├── index.css',
+        '│   └── main.tsx',
+        '├── public',
+        '│   ├── favicon.svg',
+        '│   └── icons.svg',
+        '├── index.html',
+        '├── package.json',
+        '└── vite.config.ts',
+      ])
+      return
+    }
+
+    if (cmd === 'open' || cmd === 'code') {
+      const target = rest[0] || ''
+      const id = resolveFileId(target)
+      if (!id) {
+        appendTerminal('err', [`open: file not found: ${target || '(missing)'}`])
+        return
+      }
+      openFile(id)
+      appendTerminal('out', [`Opened ${id}`])
+      return
+    }
+
+    if (cmd === 'cat') {
+      const target = rest[0] || ''
+      const id = resolveFileId(target)
+      if (!id) {
+        appendTerminal('err', [`cat: ${target || '(missing)'}: No such file`])
+        return
+      }
+      appendTerminal('out', terminalPreviewForFile(id))
+      return
+    }
+
+    if (cmd === 'echo') {
+      appendTerminal('out', [rest.join(' ')])
+      return
+    }
+
+    if (cmd === 'date') {
+      appendTerminal('out', [new Date().toString()])
+      return
+    }
+
+    if (cmd === 'whoami') {
+      appendTerminal('out', ['henry'])
+      return
+    }
+
+    if (cmd === 'henryai' || cmd === 'chat') {
+      setIsChatOpen(true)
+      appendTerminal('out', ['HenryAI opened → pannello chat a destra'])
+      return
+    }
+
+    if (cmd === 'npm' && rest[0] === 'run') {
+      const script = rest[1] || ''
+      if (script === 'dev') {
+        appendTerminal('out', ['vite v8 — dev server (simulato)', 'VITE ready — Local: http://localhost:5173/'])
+        return
+      }
+      if (script === 'build') {
+        appendTerminal('out', ['tsc -b', 'vite build', '✓ built (simulato)'])
+        return
+      }
+      appendTerminal('err', [`npm: unknown script "${script}"`])
+      return
+    }
+
+    if (cmd === 'git' && rest[0] === 'status') {
+      appendTerminal('out', [
+        'On branch main',
+        'Your branch is up to date with origin/main.',
+        '',
+        'nothing to commit, working tree clean',
+      ])
+      return
+    }
+
+    appendTerminal('err', [`zsh: command not found: ${args[0]}`])
+  }
+
+  const renderEditor = () => {
+    if (!activeFile) return null
+
+    if (activeFile.id === 'home.tsx') {
+      return <HomeView openFile={openFile} openChat={() => setIsChatOpen(true)} />
+    }
+
+    if (activeFile.id === 'about.html') {
+      return <AboutView />
+    }
+
+    if (activeFile.id === 'skills.json') {
+      return <SkillsView />
+    }
+
+    if (activeFile.id === 'portfolio.js') {
+      return <PortfolioView />
+    }
+
+    if (activeFile.id === 'resume.ts') {
+      return <ResumeView />
+    }
+
+    if (activeFile.id === 'certifications.js') {
+      return <CertificationsView />
+    }
+
+    if (activeFile.id === 'blog.html') {
+      return <BlogView />
+    }
+
+    if (activeFile.id === 'contact.css') {
+      return <ContactView />
+    }
+
+    if (activeFile.id === 'README.md') {
+      return (
+        <CodeView
+          lines={[
+            codeLine('# henrydev.it ✨ (VS Code-style Portfolio)', 'keyword'),
+            codeLine('', 'plain'),
+            codeLine(
+              'Questo portfolio è un’interfaccia ispirata a VS Code: file tree, tabs, quick open (Cmd/Ctrl+P), status bar, terminal panel e chat AI.',
+              'plain',
+            ),
+            codeLine('', 'plain'),
+            codeLine('- ✨ Apri i file dal pannello a sinistra per vedere contenuti diversi.', 'plain'),
+            codeLine('- 🎨 Colori e chip sono coerenti su tutte le pagine.', 'plain'),
+            codeLine('- 🧩 Personalizza nome, testi, progetti, skill e link dentro src/App.tsx.', 'plain'),
+          ]}
+        />
+      )
+    }
+
+    if (activeFile.id === 'resume.pdf') {
+      return <PdfView />
+    }
+
+    return null
+  }
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toLowerCase().includes('mac')
+      const mod = isMac ? e.metaKey : e.ctrlKey
+
+      if (mod && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault()
+        setIsQuickOpenOpen(true)
+        setQuickOpenQuery('')
+        setQuickOpenSelectedIndex(0)
+        return
+      }
+
+      if (mod && e.key === '`') {
+        e.preventDefault()
+        setIsTerminalOpen((v) => !v)
+      }
+
+      if (mod && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault()
+        setIsSidebarOpen((v) => !v)
+      }
+
+      if (e.key === 'Escape') {
+        if (isQuickOpenOpen) {
+          setIsQuickOpenOpen(false)
+          return
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isQuickOpenOpen])
+
+  useEffect(() => {
+    const tick = () => setNow(new Date())
+    tick()
+    const intervalId = window.setInterval(tick, 30_000)
+    return () => window.clearInterval(intervalId)
+  }, [])
+
+  const macDateTime = useMemo(() => {
+    const parts = new Intl.DateTimeFormat('it-IT', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(now)
+
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+    const weekdayRaw = get('weekday').replace('.', '')
+    const weekday = weekdayRaw ? `${weekdayRaw[0].toUpperCase()}${weekdayRaw.slice(1)}` : ''
+    const day = get('day')
+    const month = get('month').replace('.', '')
+    const hour = get('hour')
+    const minute = get('minute')
+
+    return `${weekday} ${day} ${month} ${hour}:${minute}`.trim()
+  }, [now])
+
+  const workspaceLabel = CONTENT.siteName
+  const activeFilename = activeFile?.label ?? 'home.tsx'
+  const breadcrumb = `${workspaceLabel} › src › ${activeFilename}`
+  const statusLanguage = statusLanguageForExt(activeFile?.ext)
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!resizeRef.current) return
+      const dx = e.clientX - resizeRef.current.startX
+
+      if (resizeRef.current.kind === 'chat') {
+        const next = resizeRef.current.startWidth - dx
+        setChatWidth(clamp(next, 280, 520))
+        return
+      }
+
+      const next = resizeRef.current.startWidth + dx
+      setSidebarWidth(clamp(next, 220, 520))
+    }
+
+    const onUp = () => {
+      resizeRef.current = null
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+  }, [])
+
+  useEffect(() => {
+    const root = desktopRef.current
+    const cursor = cursorRef.current
+    if (!root || !cursor) return
+
+    const isClickable = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false
+      return Boolean(
+        target.closest(
+          'a,button,[role="button"],input,textarea,select,label,.tab,.quickopen-item,.tree-item,.iconbtn,.status-item,.title-actionbtn,.macmenu-item,.left-resizer,.right-resizer',
+        ),
+      )
+    }
+
+    const onPointerMove = (e: PointerEvent) => {
+      cursor.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`
+    }
+
+    const onEnter = () => setIsCursorVisible(true)
+    const onLeave = () => setIsCursorVisible(false)
+
+    const onOver = (e: PointerEvent) => setIsCursorHover(isClickable(e.target))
+    const onOut = (e: PointerEvent) => setIsCursorHover(isClickable(e.relatedTarget))
+
+    root.addEventListener('pointermove', onPointerMove)
+    root.addEventListener('pointerenter', onEnter)
+    root.addEventListener('pointerleave', onLeave)
+    root.addEventListener('pointerover', onOver)
+    root.addEventListener('pointerout', onOut)
+
+    return () => {
+      root.removeEventListener('pointermove', onPointerMove)
+      root.removeEventListener('pointerenter', onEnter)
+      root.removeEventListener('pointerleave', onLeave)
+      root.removeEventListener('pointerover', onOver)
+      root.removeEventListener('pointerout', onOut)
+    }
+  }, [])
+
+  return (
+    <div className="desktop" ref={desktopRef}>
+      <header className="macbar" aria-label="Menu bar">
+        <div className="macbar-left">
+          <span className="mac-apple" aria-hidden="true">
+            
+          </span>
+          <span className="mac-app">Code</span>
+          <nav className="macmenu" aria-label="Application menu">
+            {['File', 'Edit', 'Selection', 'View', 'Go', 'Run', 'Terminal', 'Window', 'Help'].map(
+              (item) => (
+                <button key={item} type="button" className="macmenu-item">
+                  {item}
+                </button>
+              ),
+            )}
+          </nav>
+        </div>
+        <div className="macbar-right" aria-label="System status">
+          <button type="button" className="macbar-btn" aria-label="Battery" title="Battery">
+            <svg
+              className="mac-svg"
+              viewBox="0 0 28 24"
+              width="18"
+              height="16"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <rect
+                x="3"
+                y="6.5"
+                width="20"
+                height="11"
+                rx="2.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
+              <rect x="24" y="10" width="2.5" height="4" rx="1" fill="currentColor" />
+              <rect x="5.3" y="8.8" width="13.2" height="6.4" rx="1.6" fill="currentColor" />
+            </svg>
+          </button>
+          <button type="button" className="macbar-btn" aria-label="Wi‑Fi" title="Wi‑Fi">
+            <svg
+              className="mac-svg"
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M2.8 8.9C8.6 3.6 15.4 3.6 21.2 8.9"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M5.8 12c4.2-3.8 8.2-3.8 12.4 0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M9.1 15.1c2.3-2 3.5-2 5.8 0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <circle cx="12" cy="18.4" r="1.3" fill="currentColor" />
+            </svg>
+          </button>
+          <button type="button" className="macbar-btn" aria-label="Search" title="Search">
+            <Codicon name="search" />
+          </button>
+          <button
+            type="button"
+            className="macbar-btn"
+            aria-label="Control Center"
+            title="Control Center"
+          >
+            <span className="mac-controlcenter" aria-hidden="true" />
+          </button>
+          <button type="button" className="macbar-btn" aria-label="Siri" title="Siri">
+            <span className="mac-siri" aria-hidden="true" />
+          </button>
+          <div className="macbar-clock" aria-label="Date and time">
+            {macDateTime}
+          </div>
+        </div>
+      </header>
+
+      <div
+        className="vscode"
+        style={{ ['--chatWidth' as never]: `${chatWidth}px`, ['--sidebarWidth' as never]: `${sidebarWidth}px` }}
+      >
+        <header className="titlebar">
+        <div className="title-left">
+          <div className="traffic" aria-hidden="true">
+            <span className="dot red" />
+            <span className="dot yellow" />
+            <span className="dot green" />
+          </div>
+        </div>
+        <div className="title-center">
+          <div className="title-nav" aria-label="Navigation controls">
+            <button type="button" className="title-actionbtn" aria-label="Back" title="Back">
+              <Codicon name="arrow-left" />
+            </button>
+            <button type="button" className="title-actionbtn" aria-label="Forward" title="Forward">
+              <Codicon name="arrow-right" />
+            </button>
+            <button type="button" className="title-actionbtn" aria-label="Open in Browser" title="Open in Browser">
+              <Codicon name="link-external" />
+            </button>
+          </div>
+          <div className="title-divider" aria-hidden="true" />
+          <button
+            type="button"
+            className="addressbar"
+            aria-label="Address bar"
+            onClick={() => {
+              setIsQuickOpenOpen(true)
+              setQuickOpenQuery('')
+              setQuickOpenSelectedIndex(0)
+            }}
+          >
+            <span className="addressbar-inner">
+              <Codicon name="lock" />
+              <span className="addressbar-text">{CONTENT.siteName}</span>
+            </span>
+          </button>
+          <div className="title-divider" aria-hidden="true" />
+          <button type="button" className="title-actionbtn" aria-label="Comments" title="Comments">
+            <Codicon name="comment-add" />
+          </button>
+          <button type="button" className="title-actionbtn" aria-label="More" title="More">
+            <Codicon name="chevron-down" />
+          </button>
+        </div>
+
+        <div className="title-right">
+          <button
+            type="button"
+            className="title-actionbtn"
+            aria-label="Customize Layout"
+            title="Customize Layout"
+          >
+            <Codicon name="layout" />
+          </button>
+          <button
+            type="button"
+            className="title-actionbtn"
+            aria-label="Toggle Sidebar"
+            title="Toggle Sidebar"
+            onClick={() => setIsSidebarOpen((v) => !v)}
+          >
+            <Codicon name="layout-sidebar-left" />
+          </button>
+          <button
+            type="button"
+            className="title-actionbtn"
+            aria-label="Toggle Panel"
+            title="Toggle Panel"
+            onClick={() => setIsTerminalOpen((v) => !v)}
+          >
+            <Codicon name="layout-panel" />
+          </button>
+          <button
+            type="button"
+            className="title-actionbtn"
+            aria-label="Toggle Secondary Sidebar"
+            title="Toggle Secondary Sidebar"
+            onClick={() => setIsChatOpen((v) => !v)}
+          >
+            <Codicon name="layout-sidebar-right" />
+          </button>
+        </div>
+      </header>
+
+      <div
+        className={`workbench ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'} ${isChatOpen ? 'chat-open' : 'chat-closed'} ${isTerminalOpen ? 'panel-open' : 'panel-closed'}`}
+      >
+        <aside className="activitybar" aria-label="Activity bar">
+          <div className="activity-top">
+            {(
+              [
+                { id: 'explorer', label: 'Explorer', icon: 'files' },
+                { id: 'search', label: 'Search', icon: 'search' },
+                { id: 'scm', label: 'Source Control', icon: 'source-control' },
+                { id: 'run', label: 'Run and Debug', icon: 'debug-alt' },
+                { id: 'extensions', label: 'Extensions', icon: 'extensions' },
+                { id: 'remote', label: 'Remote Explorer', icon: 'remote-explorer' },
+                { id: 'github-actions', label: 'GitHub Actions', icon: 'github-action' },
+                { id: 'package', label: 'Containers', icon: 'package' },
+              ] as const
+            ).map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                className={`activity-btn ${activeActivity === a.id ? 'active' : ''}`}
+                aria-label={a.label}
+                title={a.label}
+                onClick={() => setActiveActivity(a.id)}
+              >
+                {a.id === 'github-actions' ? (
+                  <svg
+                    className="activity-svg"
+                    viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <rect x="5" y="4" width="10" height="10" rx="1.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                    <rect x="9" y="10" width="10" height="10" rx="1.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                  </svg>
+                ) : (
+                  <Codicon name={a.icon} />
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="activity-bottom">
+            <button type="button" className="activity-btn" aria-label="Accounts" title="Accounts">
+              <Codicon name="account" />
+            </button>
+            <button type="button" className="activity-btn" aria-label="Manage" title="Manage">
+              <Codicon name="settings-gear" />
+            </button>
+          </div>
+        </aside>
+
+        {isSidebarOpen ? (
+          <>
+            <aside className="sidebar" aria-label="Explorer">
+              <div className="sidebar-header">
+                <div className="sidebar-title">EXPLORER</div>
+                <div className="sidebar-actions">
+                  <button type="button" className="iconbtn" aria-label="More actions" title="More actions">
+                    <Codicon name="ellipsis" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="tree">
+                <button type="button" className="section-header" onClick={() => setIsOpenEditorsOpen((v) => !v)}>
+                  <span className="section-caret" aria-hidden="true">
+                    {isOpenEditorsOpen ? <Codicon name="chevron-down" /> : <Codicon name="chevron-right" />}
+                  </span>
+                  <span className="section-title">OPEN EDITORS</span>
+                  <span className="section-count">{openTabs.length}</span>
+                </button>
+                {isOpenEditorsOpen ? (
+                  <div className="tree-children">
+                    {openTabs.map((tabId) => {
+                      const f = allFiles.find((x) => x.id === tabId)
+                      if (!f) return null
+                      return (
+                        <button
+                          key={tabId}
+                          type="button"
+                          className={`tree-item ${tabId === activeTab ? 'active' : ''}`}
+                          onClick={() => setActiveTab(tabId)}
+                        >
+                          <FileIcon ext={f.ext} />
+                          <span className="tree-label">{f.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
+
+                <button type="button" className="section-header" onClick={() => setIsPortfolioOpen((v) => !v)}>
+                  <span className="section-caret" aria-hidden="true">
+                    {isPortfolioOpen ? <Codicon name="chevron-down" /> : <Codicon name="chevron-right" />}
+                  </span>
+                  <span className="section-title">{FILE_TREE.label}</span>
+                </button>
+
+                {isPortfolioOpen ? (
+                  <div className="tree-children">
+                    {FILE_TREE.children.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        className={`tree-item ${f.id === activeTab ? 'active' : ''}`}
+                        onClick={() => openFile(f.id)}
+                      >
+                        <FileIcon ext={f.ext} />
+                        <span className="tree-label">{f.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                <button type="button" className="section-header" onClick={() => setIsOutlineOpen((v) => !v)}>
+                  <span className="section-caret" aria-hidden="true">
+                    {isOutlineOpen ? <Codicon name="chevron-down" /> : <Codicon name="chevron-right" />}
+                  </span>
+                  <span className="section-title">OUTLINE</span>
+                </button>
+                {isOutlineOpen ? <div className="section-empty">No symbols</div> : null}
+
+                <button type="button" className="section-header" onClick={() => setIsTimelineOpen((v) => !v)}>
+                  <span className="section-caret" aria-hidden="true">
+                    {isTimelineOpen ? <Codicon name="chevron-down" /> : <Codicon name="chevron-right" />}
+                  </span>
+                  <span className="section-title">TIMELINE</span>
+                </button>
+                {isTimelineOpen ? <div className="section-empty">No timeline</div> : null}
+
+                <button
+                  type="button"
+                  className={`tree-item tree-item-copilot ${isChatOpen ? '' : ''}`}
+                  aria-label="Open AI chat"
+                  onClick={() => setIsChatOpen(true)}
+                >
+                  <span className="file-icon" style={{ color: '#4fc1ff' }} aria-hidden="true">
+                    <Codicon name="copilot" />
+                  </span>
+                  <span className="tree-label">HenryAI&apos;s Copilot</span>
+                  <span className="tree-badge" aria-hidden="true">
+                    AI
+                  </span>
+                </button>
+              </div>
+            </aside>
+            <div
+              className="left-resizer"
+              role="separator"
+              aria-label="Resize sidebar"
+              onPointerDown={(e) => {
+                resizeRef.current = { kind: 'sidebar', startX: e.clientX, startWidth: sidebarWidth }
+                ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
+              }}
+            />
+          </>
+        ) : null}
+
+        <section className="editor" aria-label="Editor">
+          <div className="tabs" role="tablist">
+            {openTabs.map((tabId) => {
+              const tabFile = allFiles.find((f) => f.id === tabId)
+              if (!tabFile) return null
+
+              const isActive = tabId === activeTab
+
+              return (
+                <button
+                  key={tabId}
+                  type="button"
+                  className={`tab ${isActive ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tabId)}
+                  role="tab"
+                  aria-selected={isActive}
+                >
+                  <FileIcon ext={tabFile.ext} />
+                  <span className="tab-label">{tabFile.label}</span>
+                  <span
+                    className="tab-close"
+                    role="button"
+                    aria-label={`Close ${tabFile.label}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      closeTab(tabId)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') closeTab(tabId)
+                    }}
+                    tabIndex={0}
+                  >
+                    ×
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="breadcrumbbar" aria-label="Breadcrumbs">
+            {breadcrumb}
+          </div>
+
+          <div className="editor-surface">{renderEditor()}</div>
+        </section>
+
+        {isChatOpen ? (
+          <>
+            <div
+              className="right-resizer"
+              role="separator"
+              aria-label="Resize chat"
+              onPointerDown={(e) => {
+                resizeRef.current = { kind: 'chat', startX: e.clientX, startWidth: chatWidth }
+                ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
+              }}
+            />
+            <aside className="rightbar" aria-label="Chat">
+              <div className="rightbar-header">
+                <div className="rightbar-title">HENRYAI</div>
+                <div className="rightbar-actions">
+                  <button type="button" className="iconbtn" aria-label="New chat" title="New chat" onClick={resetChat}>
+                    <Codicon name="add" />
+                  </button>
+                  <button
+                    type="button"
+                    className="iconbtn"
+                    aria-label="Refresh"
+                    title="Refresh"
+                    onClick={() => setChatError(null)}
+                  >
+                    <Codicon name="refresh" />
+                  </button>
+                  <button
+                    type="button"
+                    className="iconbtn"
+                    aria-label="Close chat"
+                    title="Close chat"
+                    onClick={() => setIsChatOpen(false)}
+                  >
+                    <Codicon name="close" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="rightbar-subheader">
+                <div className="rightbar-subtitle">
+                  WORKSPACE · {CONTENT.siteName}
+                  {activeChatThread?.title ? ` · ${activeChatThread.title}` : ''}
+                </div>
+                <div className="rightbar-subactions">
+                  <button type="button" className="iconbtn" aria-label="More" title="More">
+                    <Codicon name="kebab-vertical" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="rightbar-body">
+                {chatThreads.length > 1 ? (
+                  <div className="chat-switcher" aria-label="Chats">
+                    {chatThreads.map((t) => (
+                      <div key={t.id} className={`chat-switcher-item${t.id === activeChatThreadId ? ' is-active' : ''}`}>
+                        <button type="button" className="chat-switcher-btn" onClick={() => setActiveChatThreadId(t.id)}>
+                          {t.title}
+                        </button>
+                        <button
+                          type="button"
+                          className="chat-switcher-close"
+                          aria-label={`Close ${t.title}`}
+                          title="Close"
+                          onClick={() => closeChatThread(t.id)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {chatMessages.length === 0 ? (
+                  <div className="chat-welcome">
+                    <div className="chat-welcome-logo" aria-hidden="true">
+                      <Codicon name="copilot" />
+                    </div>
+                    <div className="chat-welcome-title">Hi! I&apos;m HenryAI&apos;s Copilot</div>
+                    <div className="chat-welcome-subtitle">
+                      Chiedimi qualsiasi cosa su progetti, skills, esperienza o contatti.
+                    </div>
+                    <div className="chat-suggestgrid" aria-label="Suggested questions">
+                      {[
+                        'Puoi presentarti in breve (chi sei e cosa fai)?',
+                        'Quali sono i tuoi progetti migliori e che impatto hanno avuto?',
+                        'Qual è il tuo stack e in cosa ti senti più forte?',
+                        'Che tipo di ruoli/aziende stai cercando e su cosa vuoi lavorare?',
+                        'Hai un CV? Puoi riassumere le tue esperienze principali?',
+                        'Come posso contattarti per una proposta o una collaborazione?',
+                      ].map((q) => (
+                        <button key={q} type="button" className="chat-suggestbtn" onClick={() => void sendChat(q)}>
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="chat-welcome-footnote">
+                      AI può sbagliare · per info critiche contattami direttamente
+                    </div>
+                  </div>
+                ) : (
+                  <div className="chat-thread" role="log" aria-label="Chat messages">
+                    {chatMessages.map((m) => (
+                      <div key={m.id} className={`chat-msg ${m.role}`}>
+                        {m.role === 'assistant' ? (
+                          <span className="chat-avatar" aria-hidden="true">
+                            <Codicon name="copilot" />
+                          </span>
+                        ) : null}
+                        <div className={`chat-bubble ${m.role}`}>{m.content}</div>
+                      </div>
+                    ))}
+                    {chatIsSending ? (
+                      <div className="chat-msg assistant">
+                        <span className="chat-avatar" aria-hidden="true">
+                          <Codicon name="copilot" />
+                        </span>
+                        <div className="chat-bubble assistant chat-typing">Sto scrivendo…</div>
+                      </div>
+                    ) : null}
+                    {chatError ? <div className="chat-error">{chatError}</div> : null}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
+              </div>
+
+              <div className="rightbar-input">
+                <textarea
+                  className="chat-input"
+                  placeholder="Ask about Henry’s projects, experience, skills…"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      void sendChat(chatInput)
+                    }
+                  }}
+                  rows={1}
+                />
+                <button
+                  type="button"
+                  className="chat-send"
+                  aria-label="Send"
+                  title="Send"
+                  disabled={chatIsSending || chatInput.trim().length === 0}
+                  onClick={() => void sendChat(chatInput)}
+                >
+                  <Codicon name="send" />
+                </button>
+              </div>
+            </aside>
+          </>
+        ) : null}
+        {isTerminalOpen ? (
+          <section className="panel" aria-label="Panel">
+            <div className="panel-tabs">
+              <div className="panel-tab active">TERMINAL</div>
+              <button type="button" className="panel-close" onClick={() => setIsTerminalOpen(false)}>
+                ×
+              </button>
+            </div>
+            <div
+              className="terminal"
+              ref={terminalScrollRef}
+              onMouseDown={(e) => {
+                if ((e.target as HTMLElement | null)?.closest('input')) return
+                terminalInputRef.current?.focus()
+              }}
+            >
+              {terminalEntries.map((l) => {
+                if (l.kind === 'cmd') {
+                  return (
+                    <div key={l.id} className="terminal-line terminal-cmd">
+                      <span className="terminal-cwd">{(l.cwd || terminalCwd).replace(/^~\//, '')}</span>
+                      <span className="terminal-prompt">%</span>
+                      <span className="terminal-cmdtext">{l.text}</span>
+                    </div>
+                  )
+                }
+                return (
+                  <div key={l.id} className={`terminal-line terminal-${l.kind}`}>
+                    {l.text}
+                  </div>
+                )
+              })}
+
+              <div className="terminal-line terminal-inputrow">
+                <span className="terminal-cwd">{terminalCwd.replace(/^~\//, '')}</span>
+                <span className="terminal-prompt">%</span>
+                <input
+                  ref={terminalInputRef}
+                  className="terminal-input"
+                  value={terminalInput}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  onChange={(e) => setTerminalInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const next = terminalInput
+                      setTerminalInput('')
+                      void execTerminal(next)
+                      return
+                    }
+
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      if (terminalHistory.length === 0) return
+                      const idx =
+                        terminalHistoryIndex === -1
+                          ? terminalHistory.length - 1
+                          : Math.max(0, terminalHistoryIndex - 1)
+                      setTerminalHistoryIndex(idx)
+                      setTerminalInput(terminalHistory[idx] || '')
+                      return
+                    }
+
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      if (terminalHistory.length === 0) return
+                      if (terminalHistoryIndex === -1) return
+                      const idx = terminalHistoryIndex + 1
+                      if (idx >= terminalHistory.length) {
+                        setTerminalHistoryIndex(-1)
+                        setTerminalInput('')
+                        return
+                      }
+                      setTerminalHistoryIndex(idx)
+                      setTerminalInput(terminalHistory[idx] || '')
+                      return
+                    }
+
+                    if (e.key === 'Tab') {
+                      e.preventDefault()
+                      const m = terminalInput.match(/^(open|code|cat)\s+([^\s]*)$/i)
+                      if (!m) return
+                      const cmd = m[1]
+                      const partial = (m[2] || '').toLowerCase()
+                      const files = allFiles.map((f) => f.label)
+                      const hit = files.find((f) => f.toLowerCase().startsWith(partial))
+                      if (!hit) return
+                      setTerminalInput(`${cmd} ${hit}`)
+                    }
+                  }}
+                />
+              </div>
+              <div ref={terminalEndRef} />
+            </div>
+          </section>
+        ) : null}
+      </div>
+
+      <footer className="statusbar" aria-label="Status bar">
+        <div className="status-left">
+          <div className="status-item status-inline">
+            <Codicon name="remote" />
+            <Codicon name="git-branch" />
+            <span>main</span>
+          </div>
+          <div className="status-item status-inline">
+            <Codicon name="sync" />
+            <span>{FILE_TREE.label}</span>
+          </div>
+        </div>
+        <div className="status-right">
+          <div className="status-item">Ln 1, Col 1</div>
+          <div className="status-item">Spaces: 4</div>
+          <div className="status-item">UTF-8</div>
+          <div className="status-item">LF</div>
+          <div className="status-item">{statusLanguage}</div>
+          <div className="status-divider" aria-hidden="true" />
+          <div className="status-item status-inline">
+            <Codicon name="radio-tower" />
+            <span>Go Live</span>
+          </div>
+          <div className="status-item status-dropdown">
+            Dark (Visual Studio) <Codicon name="chevron-down" className="status-dropdown-icon" />
+          </div>
+          <div className="status-item status-icon">
+            <Codicon name="copilot" />
+          </div>
+          <div className="status-item status-icon">
+            <Codicon name="bell" />
+          </div>
+        </div>
+      </footer>
+
+      <QuickOpen
+        open={isQuickOpenOpen}
+        query={quickOpenQuery}
+        setQuery={setQuickOpenQuery}
+        items={quickOpenItems}
+        selectedIndex={quickOpenSelectedIndex}
+        setSelectedIndex={setQuickOpenSelectedIndex}
+        onSelect={(id) => {
+          openFile(id)
+          setIsQuickOpenOpen(false)
+        }}
+        onClose={() => setIsQuickOpenOpen(false)}
+      />
+      <div
+        ref={cursorRef}
+        className={`site-cursor${isCursorVisible ? ' is-visible' : ''}${isCursorHover ? ' is-hover' : ''}`}
+        aria-hidden="true"
+      >
+        <svg className="cursor-svg" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="cursorGrad" x1="0" y1="0" x2="100" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0" style={{ stopColor: 'var(--cursor-stop-1)' }} />
+              <stop offset="1" style={{ stopColor: 'var(--cursor-stop-2)' }} />
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="32" fill="none" stroke="url(#cursorGrad)" strokeWidth="4" />
+          <line x1="50" y1="0" x2="50" y2="34" stroke="url(#cursorGrad)" strokeWidth="5" strokeLinecap="square" />
+          <line x1="50" y1="66" x2="50" y2="100" stroke="url(#cursorGrad)" strokeWidth="5" strokeLinecap="square" />
+          <line x1="0" y1="50" x2="34" y2="50" stroke="url(#cursorGrad)" strokeWidth="5" strokeLinecap="square" />
+          <line x1="66" y1="50" x2="100" y2="50" stroke="url(#cursorGrad)" strokeWidth="5" strokeLinecap="square" />
+          <circle cx="50" cy="50" r="5" fill="url(#cursorGrad)" />
+        </svg>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+export default App

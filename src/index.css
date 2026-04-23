@@ -1,0 +1,92 @@
+:root {
+  --vscode-bg: #1e1e1e;
+  --vscode-fg: #d4d4d4;
+  --vscode-muted: #9da0a6;
+  --vscode-border: #2a2a2a;
+  --vscode-elev: #252526;
+  --vscode-elev-2: #2d2d2d;
+  --vscode-tab: #2d2d2d;
+  --vscode-tab-active: #1e1e1e;
+  --vscode-accent: #007acc;
+  --vscode-accent-2: #c586c0;
+  --vscode-green: #6a9955;
+  --vscode-orange: #ce9178;
+  --vscode-blue: #4fc1ff;
+  --vscode-pink: #d16d9e;
+
+  --sans: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans,
+    sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+
+  font: 14px/140% var(--sans);
+  letter-spacing: 0.2px;
+  color-scheme: dark;
+  color: var(--vscode-fg);
+  background: var(--vscode-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #0f0f0f;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
+::selection {
+  background: rgba(0, 122, 204, 0.35);
+}
+
+* {
+  scrollbar-color: #424242 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #505050;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
