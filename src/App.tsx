@@ -12,6 +12,7 @@ type FileId =
   | 'blog.html'
   | 'README.md'
   | 'resume.pdf'
+  | 'index.html'
 
 type FileEntry = {
   id: FileId
@@ -98,6 +99,7 @@ const FILE_TREE: FolderEntry = {
     { id: 'certifications.js', label: 'certifications.js', kind: 'file', ext: 'js' },
     { id: 'contact.css', label: 'contact.css', kind: 'file', ext: 'css' },
     { id: 'blog.html', label: 'blog.html', kind: 'file', ext: 'html' },
+    { id: 'index.html', label: 'index.html', kind: 'file', ext: 'html' },
     { id: 'resume.pdf', label: 'resume.pdf', kind: 'file', ext: 'pdf' },
     { id: 'README.md', label: 'README.md', kind: 'file', ext: 'md' },
   ],
@@ -1200,6 +1202,10 @@ function terminalPreviewForFile(id: FileId): string[] {
   if (id === 'blog.html') {
     const posts = CONTENT.blogPosts as readonly BlogPostItem[]
     return ['<!-- blog.html -->', ...posts.slice(0, 4).map((p) => `- ${p.title} (${p.dateLabel})`)]
+  }
+
+  if (id === 'index.html') {
+    return ['<!-- index.html -->', '<h1>Index</h1>', '<p>Scrivi HTML qui, direttamente nel sito.</p>']
   }
 
   if (id === 'resume.pdf') {
@@ -2587,6 +2593,488 @@ function PdfView() {
   )
 }
 
+type HtmlCompletionKind = 'tag' | 'attr'
+type HtmlCompletionItem = {
+  label: string
+  kind: HtmlCompletionKind
+  insertText: string
+  cursorDelta: number
+}
+
+function escapeHtml(input: string) {
+  return input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+function highlightHtmlToHtml(code: string) {
+  const isSpace = (ch: string) => /\s/.test(ch)
+  let out = ''
+  let i = 0
+
+  while (i < code.length) {
+    if (code.startsWith('<!--', i)) {
+      const end = code.indexOf('-->', i + 4)
+      const endIdx = end === -1 ? code.length : end + 3
+      out += `<span class="hl-comment">${escapeHtml(code.slice(i, endIdx))}</span>`
+      i = endIdx
+      continue
+    }
+
+    if (code[i] === '<') {
+      if (code.startsWith('<!', i) && !code.startsWith('<!--', i)) {
+        const end = code.indexOf('>', i + 2)
+        const endIdx = end === -1 ? code.length : end + 1
+        out += `<span class="hl-meta">${escapeHtml(code.slice(i, endIdx))}</span>`
+        i = endIdx
+        continue
+      }
+
+      const end = code.indexOf('>', i + 1)
+      const endIdx = end === -1 ? code.length : end + 1
+      const inner = code.slice(i + 1, endIdx - 1)
+      let k = 0
+      let closing = false
+
+      out += `<span class="hl-punc">&lt;</span>`
+      if (inner[k] === '/') {
+        closing = true
+        out += `<span class="hl-punc">/</span>`
+        k += 1
+      }
+
+      const nameMatch = /^[A-Za-z][A-Za-z0-9:-]*/.exec(inner.slice(k))
+      if (nameMatch) {
+        out += `<span class="hl-tag">${escapeHtml(nameMatch[0])}</span>`
+        k += nameMatch[0].length
+      } else if (!closing && inner[k] === '/') {
+        out += `<span class="hl-punc">/</span>`
+        k += 1
+      }
+
+      while (k < inner.length) {
+        const ch = inner[k]
+        if (isSpace(ch)) {
+          out += escapeHtml(ch)
+          k += 1
+          continue
+        }
+        if (ch === '/') {
+          out += `<span class="hl-punc">/</span>`
+          k += 1
+          continue
+        }
+
+        const attrMatch = /^[^\s=/>]+/.exec(inner.slice(k))
+        if (!attrMatch) {
+          out += escapeHtml(ch)
+          k += 1
+          continue
+        }
+        const attrName = attrMatch[0]
+        out += `<span class="hl-attr">${escapeHtml(attrName)}</span>`
+        k += attrName.length
+
+        while (k < inner.length && isSpace(inner[k])) {
+          out += escapeHtml(inner[k])
+          k += 1
+        }
+
+        if (inner[k] === '=') {
+          out += `<span class="hl-punc">=</span>`
+          k += 1
+          while (k < inner.length && isSpace(inner[k])) {
+            out += escapeHtml(inner[k])
+            k += 1
+          }
+          const quote = inner[k]
+          if (quote === '"' || quote === "'") {
+            k += 1
+            const valueStart = k
+            while (k < inner.length && inner[k] !== quote) k += 1
+            const value = inner.slice(valueStart, k)
+            const q = escapeHtml(quote)
+            out += `<span class="hl-string">${q}${escapeHtml(value)}${q}</span>`
+            if (inner[k] === quote) k += 1
+          } else {
+            const valueMatch = /^[^\s>]+/.exec(inner.slice(k))
+            if (valueMatch) {
+              out += `<span class="hl-string">${escapeHtml(valueMatch[0])}</span>`
+              k += valueMatch[0].length
+            }
+          }
+        }
+      }
+
+      out += `<span class="hl-punc">&gt;</span>`
+      i = endIdx
+      continue
+    }
+
+    const nextTag = code.indexOf('<', i)
+    const endIdx = nextTag === -1 ? code.length : nextTag
+    out += escapeHtml(code.slice(i, endIdx))
+    i = endIdx
+  }
+
+  return out
+}
+
+function formatHtml(code: string) {
+  const voidTags = new Set([
+    'area',
+    'base',
+    'br',
+    'col',
+    'embed',
+    'hr',
+    'img',
+    'input',
+    'link',
+    'meta',
+    'param',
+    'source',
+    'track',
+    'wbr',
+  ])
+
+  const lines = code.split('\n')
+  const out: string[] = []
+  let indent = 0
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) {
+      out.push('')
+      continue
+    }
+
+    const isCommentOrMeta = line.startsWith('<!--') || line.startsWith('<!') || line.startsWith('<?')
+    const isClosing = /^<\/[A-Za-z]/.test(line)
+    if (isClosing) indent = Math.max(0, indent - 1)
+
+    out.push(`${'  '.repeat(indent)}${line}`)
+
+    if (isCommentOrMeta || isClosing) continue
+    const openMatch = /^<([A-Za-z][A-Za-z0-9:-]*)\b[^>]*>$/.exec(line)
+    if (!openMatch) continue
+    const tag = openMatch[1].toLowerCase()
+    if (line.endsWith('/>') || voidTags.has(tag)) continue
+    indent += 1
+  }
+
+  return out.join('\n')
+}
+
+function IndexHtmlView() {
+  const storageKey = 'henrydev.index.html.v1'
+  const [value, setValue] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    const saved = window.localStorage.getItem(storageKey)
+    if (saved != null) return saved
+    return [
+      '<!doctype html>',
+      '<html lang="it">',
+      '  <head>',
+      '    <meta charset="UTF-8" />',
+      '    <meta name="viewport" content="width=device-width, initial-scale=1.0" />',
+      '    <title>henrydev.it • index.html</title>',
+      '    <meta name="description" content="Personal website • VS Code-inspired UI" />',
+      '  </head>',
+      '  <body>',
+      '    <main class="container">',
+      '      <header>',
+      '        <h1>Hello 👋</h1>',
+      '        <p>I build web & software solutions. Let’s collaborate.</p>',
+      '      </header>',
+      '',
+      '      <section>',
+      '        <h2>Quick links</h2>',
+      '        <ul>',
+      '          <li><a href="https://henrydev.it" target="_blank" rel="noreferrer">Website</a></li>',
+      '          <li><a href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a></li>',
+      '          <li><a href="mailto:henry8913@hotmail.it">Email</a></li>',
+      '        </ul>',
+      '      </section>',
+      '    </main>',
+      '  </body>',
+      '</html>',
+      '',
+    ].join('\n')
+  })
+
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const gutterRef = useRef<HTMLDivElement | null>(null)
+  const highlightRef = useRef<HTMLPreElement | null>(null)
+  const measureRef = useRef<HTMLSpanElement | null>(null)
+  const [charWidth, setCharWidth] = useState(8)
+
+  const [suggestOpen, setSuggestOpen] = useState(false)
+  const [suggestItems, setSuggestItems] = useState<HtmlCompletionItem[]>([])
+  const [suggestIndex, setSuggestIndex] = useState(0)
+  const [suggestPos, setSuggestPos] = useState<{ top: number; left: number }>({ top: 40, left: 60 })
+  const [suggestReplace, setSuggestReplace] = useState<{ start: number; end: number } | null>(null)
+
+  const highlighted = useMemo(() => highlightHtmlToHtml(value), [value])
+  const lineCount = useMemo(() => Math.max(1, value.split('\n').length), [value])
+  const pad = useMemo(() => Math.max(2, String(lineCount).length), [lineCount])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(storageKey, value)
+  }, [storageKey, value])
+
+  useEffect(() => {
+    const el = measureRef.current
+    if (!el) return
+    const w = el.getBoundingClientRect().width
+    if (Number.isFinite(w) && w > 0) setCharWidth(w)
+  }, [])
+
+  const syncScroll = () => {
+    const gutter = gutterRef.current
+    const textarea = textareaRef.current
+    const highlightEl = highlightRef.current
+    if (!gutter || !textarea || !highlightEl) return
+    gutter.scrollTop = textarea.scrollTop
+    highlightEl.scrollTop = textarea.scrollTop
+    highlightEl.scrollLeft = textarea.scrollLeft
+  }
+
+  const closeSuggest = () => {
+    setSuggestOpen(false)
+    setSuggestItems([])
+    setSuggestIndex(0)
+    setSuggestReplace(null)
+  }
+
+  const updateSuggestPosition = () => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const cursor = textarea.selectionStart
+    const before = value.slice(0, cursor)
+    const lineIndex = before.split('\n').length - 1
+    const lineStart = before.lastIndexOf('\n') + 1
+    const col = cursor - lineStart
+
+    const padTop = 14
+    const padLeft = 16
+    const lineHeight = 20
+    const top = padTop + lineIndex * lineHeight - textarea.scrollTop + lineHeight
+    const left = padLeft + col * charWidth - textarea.scrollLeft
+    setSuggestPos({ top, left })
+  }
+
+  const computeCompletions = (nextValue: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return { items: [] as HtmlCompletionItem[], replace: null as { start: number; end: number } | null }
+    const cursor = textarea.selectionStart
+
+    const before = nextValue.slice(0, cursor)
+    const lt = before.lastIndexOf('<')
+    const gt = before.lastIndexOf('>')
+    if (lt === -1 || lt < gt) return { items: [], replace: null }
+
+    const inTag = before.slice(lt + 1)
+    if (inTag.startsWith('!') || inTag.startsWith('?') || inTag.startsWith('/')) return { items: [], replace: null }
+
+    const hasSpace = /\s/.test(inTag)
+    const tagPart = hasSpace ? inTag.split(/\s+/)[0] : inTag
+    const prefix = tagPart.replace(/[^A-Za-z0-9:-]/g, '')
+    const replace = { start: cursor - prefix.length, end: cursor }
+
+    const tagList = [
+      'a',
+      'article',
+      'body',
+      'button',
+      'div',
+      'footer',
+      'form',
+      'h1',
+      'h2',
+      'h3',
+      'head',
+      'header',
+      'html',
+      'img',
+      'input',
+      'label',
+      'li',
+      'link',
+      'main',
+      'meta',
+      'nav',
+      'p',
+      'script',
+      'section',
+      'span',
+      'style',
+      'title',
+      'ul',
+    ]
+
+    if (!hasSpace) {
+      const items = tagList
+        .filter((t) => t.startsWith(prefix.toLowerCase()))
+        .slice(0, 10)
+        .map((t) => ({ label: t, kind: 'tag' as const, insertText: t, cursorDelta: t.length }))
+      return { items, replace }
+    }
+
+    const lastSpace = inTag.lastIndexOf(' ')
+    const attrPrefixRaw = inTag.slice(lastSpace + 1)
+    const attrPrefix = attrPrefixRaw.replace(/[^A-Za-z0-9:-]/g, '')
+    const attrReplace = { start: cursor - attrPrefix.length, end: cursor }
+    const attrList = [
+      'class',
+      'id',
+      'href',
+      'src',
+      'alt',
+      'title',
+      'rel',
+      'target',
+      'type',
+      'name',
+      'content',
+      'charset',
+      'lang',
+    ]
+    const items = attrList
+      .filter((a) => a.startsWith(attrPrefix.toLowerCase()))
+      .slice(0, 10)
+      .map((a) => ({ label: a, kind: 'attr' as const, insertText: `${a}=""`, cursorDelta: a.length + 2 }))
+    return { items, replace: attrReplace }
+  }
+
+  const openSuggestFromValue = (nextValue: string) => {
+    const { items, replace } = computeCompletions(nextValue)
+    if (items.length === 0 || !replace) {
+      closeSuggest()
+      return
+    }
+    setSuggestItems(items)
+    setSuggestIndex(0)
+    setSuggestOpen(true)
+    setSuggestReplace(replace)
+    updateSuggestPosition()
+  }
+
+  const applyCompletion = (item: HtmlCompletionItem) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const replace = suggestReplace
+    if (!replace) return
+
+    const next = `${value.slice(0, replace.start)}${item.insertText}${value.slice(replace.end)}`
+    setValue(next)
+    closeSuggest()
+
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const cursor = replace.start + item.cursorDelta
+      textarea.setSelectionRange(cursor, cursor)
+      syncScroll()
+    })
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.altKey && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault()
+      const textarea = textareaRef.current
+      if (!textarea) return
+      const cursor = textarea.selectionStart
+      const next = formatHtml(value)
+      setValue(next)
+      closeSuggest()
+      requestAnimationFrame(() => {
+        textarea.focus()
+        textarea.setSelectionRange(Math.min(cursor, next.length), Math.min(cursor, next.length))
+        syncScroll()
+      })
+      return
+    }
+
+    if (!suggestOpen) return
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      closeSuggest()
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSuggestIndex((v) => Math.min(v + 1, suggestItems.length - 1))
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSuggestIndex((v) => Math.max(v - 1, 0))
+      return
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      const item = suggestItems[suggestIndex]
+      if (item) applyCompletion(item)
+    }
+  }
+
+  return (
+    <div className="editor-scroll index-editor">
+      <div ref={gutterRef} className="index-gutter" aria-hidden="true">
+        {Array.from({ length: lineCount }, (_, idx) => (
+          <div key={idx} className="index-ln">
+            {String(idx + 1).padStart(pad, ' ')}
+          </div>
+        ))}
+      </div>
+      <div className="index-wrap">
+        <span ref={measureRef} className="index-measure">
+          M
+        </span>
+        <pre
+          ref={highlightRef}
+          className="index-highlight"
+          aria-hidden="true"
+          dangerouslySetInnerHTML={{ __html: highlighted }}
+        />
+        <textarea
+          ref={textareaRef}
+          className="index-textarea"
+          value={value}
+          onChange={(e) => {
+            const nextValue = e.target.value
+            setValue(nextValue)
+            openSuggestFromValue(nextValue)
+          }}
+          onScroll={syncScroll}
+          onKeyDown={onKeyDown}
+          onClick={() => openSuggestFromValue(value)}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+        />
+        {suggestOpen && suggestItems.length > 0 && (
+          <div className="index-suggest" style={{ top: `${suggestPos.top}px`, left: `${suggestPos.left}px` }}>
+            {suggestItems.map((it, idx) => (
+              <button
+                key={`${it.kind}-${it.label}`}
+                type="button"
+                className={`index-suggest-item${idx === suggestIndex ? ' is-active' : ''}`}
+                onMouseDown={(ev) => {
+                  ev.preventDefault()
+                  applyCompletion(it)
+                }}
+              >
+                <span className="index-suggest-kind">{it.kind}</span>
+                <span className="index-suggest-label">{it.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function CodeView({ lines }: { lines: CodeLine[] }) {
   return (
     <div className="editor-scroll">
@@ -3112,6 +3600,10 @@ function App() {
 
     if (activeFile.id === 'blog.html') {
       return <BlogView />
+    }
+
+    if (activeFile.id === 'index.html') {
+      return <IndexHtmlView />
     }
 
     if (activeFile.id === 'contact.css') {
