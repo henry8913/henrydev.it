@@ -7,6 +7,11 @@
   cursor: none;
 }
 
+:root {
+  /* Used to keep mobile overlays above the blue footer/statusbar */
+  --statusbar-height: 22px;
+}
+
 .desktop a,
 .desktop button,
 .desktop [role='button'],
@@ -95,7 +100,7 @@
   padding: 0 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   user-select: none;
-  padding: 8px;
+  padding: 8px 10px;
 }
 
 .macbar-left {
@@ -113,11 +118,11 @@
 }
 
 .macbar-btn {
-  width: 26px;
-  height: 22px;
+  width: 30px;
+  height: 26px;
   display: inline-grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: inherit;
@@ -129,7 +134,7 @@
 }
 
 .macbar .codicon {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .mac-svg {
@@ -159,20 +164,20 @@
 }
 
 .macbar-clock {
-  font-size: 12px;
+  font-size: 13px;
   color: #e6e6e6;
   letter-spacing: 0.2px;
   white-space: nowrap;
 }
 
 .mac-apple {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1;
   color: #d4d4d4;
 }
 
 .mac-app {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   color: #e6e6e6;
 }
@@ -183,23 +188,118 @@
   gap: 2px;
 }
 
+.macmenu-root {
+  position: relative;
+}
+
 .macmenu-item {
   border: none;
   background: transparent;
   color: #d4d4d4;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 8px;
   cursor: default;
+}
+
+.macmenu-item[aria-expanded='true'] {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .macmenu-item:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.macmenu-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 240px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(28, 28, 28, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  z-index: 80;
+}
+
+.macmenu-dd-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #e6e6e6;
+  font-size: 14px;
+  line-height: 1.2;
+  cursor: default;
+  text-align: left;
+}
+
+.macmenu-dd-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.macmenu-dd-item.is-disabled,
+.macmenu-dd-item:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.macmenu-dd-shortcut {
+  font-size: 12px;
+  color: rgba(230, 230, 230, 0.7);
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+.macmenu-sep {
+  height: 1px;
+  margin: 6px 8px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.macmenu-dd-header {
+  padding: 8px 10px 6px;
+  font-size: 11px;
+  color: rgba(230, 230, 230, 0.55);
+  letter-spacing: 0.14em;
+}
+
+.macmenu-kbrow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.macmenu-kbkey {
+  font-size: 12px;
+  font-family: var(--mono);
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(230, 230, 230, 0.9);
+  white-space: nowrap;
+}
+
+.macmenu-kbtext {
+  font-size: 13px;
+  color: rgba(230, 230, 230, 0.78);
+}
+
 .titlebar {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  /* Allow the center column to shrink on small screens (prevents hiding right buttons) */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 0 10px;
@@ -802,6 +902,191 @@
   overflow: auto;
 }
 
+/* -------------------------
+   Settings panel (sidebar)
+   ------------------------- */
+.settings-panel {
+  padding: 10px;
+  display: grid;
+  gap: 14px;
+}
+
+.settings-copilotbtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(124, 77, 255, 0.35);
+  background: rgba(124, 77, 255, 0.14);
+  color: #e9ddff;
+  cursor: pointer;
+}
+
+.settings-terminalbtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(106, 153, 85, 0.35);
+  background: rgba(106, 153, 85, 0.12);
+  color: rgba(220, 255, 220, 0.92);
+  cursor: pointer;
+}
+
+.settings-terminalbtn-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.settings-terminalbtn-right {
+  display: inline-flex;
+  align-items: center;
+}
+
+.settings-terminal-icon .codicon {
+  font-size: 14px;
+}
+
+.settings-chip-terminal {
+  color: rgba(200, 255, 200, 0.92);
+  border-color: rgba(106, 153, 85, 0.35);
+  background: rgba(106, 153, 85, 0.14);
+}
+
+.settings-copilotbtn-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.settings-copilot-spark {
+  color: #d7c9ff;
+}
+
+.settings-chip {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--mono);
+}
+
+.settings-section {
+  display: grid;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.settings-sectiontitle {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(212, 212, 212, 0.75);
+}
+
+.settings-list {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 14px 1fr 16px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #d4d4d4;
+  cursor: pointer;
+}
+
+.settings-item.is-active {
+  border-color: rgba(79, 193, 255, 0.4);
+  background: rgba(0, 122, 204, 0.14);
+  color: #ffffff;
+}
+
+.settings-itemlabel {
+  font-size: 12px;
+}
+
+.settings-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.settings-check {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 900;
+}
+
+.settings-kb {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-kbrow {
+  display: grid;
+  /* Let the key pill size itself, so it never overlaps the label */
+  grid-template-columns: max-content 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.settings-kbkey {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 7px;
+  padding: 3px 6px;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+.settings-kbtext {
+  font-size: 12px;
+  color: rgba(212, 212, 212, 0.85);
+}
+
+.settings-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  color: #d4d4d4;
+  text-decoration: none;
+}
+
+.settings-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
 .tree-children {
   display: flex;
   flex-direction: column;
@@ -895,6 +1180,23 @@
 .tree-item.tree-item-copilot.active {
   border-color: rgba(79, 193, 255, 0.35);
   background: rgba(0, 122, 204, 0.12);
+}
+
+.tree-item-terminal {
+  margin: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tree-item-terminal:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tree-badge-terminal {
+  color: rgba(200, 255, 200, 0.92);
+  border-color: rgba(106, 153, 85, 0.35);
+  background: rgba(106, 153, 85, 0.14);
 }
 
 .tree-badge {
@@ -1053,8 +1355,56 @@
 .editor-scroll.index-editor {
   display: grid;
   grid-template-columns: 34px 1fr;
+  grid-template-rows: auto 1fr;
   overflow: hidden;
   --editorLineHeight: 20px;
+  min-height: 0;
+}
+
+.index-toolbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--vscode-border);
+  background: #252526;
+}
+
+.index-gutter,
+.index-wrap,
+.index-preview {
+  grid-row: 2;
+  min-height: 0;
+}
+
+.index-toolbar-left {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(212, 212, 212, 0.9);
+}
+
+.index-toolbar-right {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.index-preview {
+  grid-column: 1 / -1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #1e1e1e;
+}
+
+.index-preview-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  border: 0;
+  display: block;
+  background: #ffffff;
 }
 
 .index-gutter {
@@ -1130,6 +1480,34 @@
   white-space: pre;
   overflow: auto;
   tab-size: 2;
+}
+
+@media (max-width: 600px) {
+  /* index.html: on phones prefer readability (no horizontal scrolling) */
+  .editor-scroll.index-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .index-gutter {
+    display: none;
+  }
+
+  .index-highlight,
+  .index-textarea {
+    white-space: pre-wrap;
+    overflow-x: hidden;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* When the chat reduces the editor width, wrap long lines instead of forcing horizontal scroll */
+.workbench.chat-open .index-highlight,
+.workbench.chat-open .index-textarea {
+  white-space: pre-wrap;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .hl-punc {
@@ -1363,6 +1741,7 @@
   align-items: center;
   padding: 0 8px;
   border-radius: 0 0 12px 12px;
+  height: var(--statusbar-height);
 }
 
 .status-left,
@@ -3140,9 +3519,136 @@ button.status-item:hover {
    ------------------------------------------------------------ */
 
 @media (max-width: 900px) {
+  /* Mobile: remove the extra mac menu bar to gain vertical space (like the reference UI) */
+  .macbar {
+    display: none;
+  }
+
   /* The macOS-like menu bar becomes too wide on smaller screens */
   .macmenu {
     display: none;
+  }
+
+  /* Close button only needed on mobile drawer */
+  .sidebar-close {
+    display: inline-grid;
+  }
+
+  /*
+    Mobile fix:
+    When the app has "sidebar-open" class, the more specific selectors below were
+    overriding the generic `.workbench { grid-template-columns: 48px 1fr; }`,
+    leaving an empty reserved column even if `.sidebar` is hidden.
+  */
+  .workbench,
+  .workbench.sidebar-closed,
+  .workbench.sidebar-open,
+  .workbench.sidebar-open.chat-open,
+  .workbench.sidebar-closed.chat-open,
+  .workbench.panel-open,
+  .workbench.sidebar-open.panel-open,
+  .workbench.sidebar-closed.panel-open {
+    /* Activity bar becomes an overlay on mobile, so the grid can be full width */
+    grid-template-columns: 1fr;
+  }
+
+  /* On mobile we keep features (sidebar/chat/panel) accessible via overlays */
+  .left-resizer,
+  .right-resizer {
+    display: none;
+  }
+
+  /* Hide activity bar by default to maximize editor width */
+  .activitybar {
+    display: none;
+  }
+
+  /* Show activity bar only when the sidebar drawer is open */
+  .workbench.sidebar-open .activitybar {
+    display: flex;
+    position: fixed;
+    top: 42px;
+    left: 0;
+    bottom: calc(var(--statusbar-height) + max(0px, env(safe-area-inset-bottom)));
+    width: 48px;
+    z-index: 85;
+  }
+
+  /* Do not reserve extra grid rows for the panel on mobile (it will be fixed) */
+  .workbench.panel-open {
+    grid-template-rows: 1fr;
+  }
+
+  /*
+    Sidebar as a slide-in drawer (keeps all desktop features usable on mobile)
+    It slides over the editor instead of shrinking it.
+  */
+  .sidebar {
+    display: flex;
+    position: fixed;
+    top: 42px;
+    left: 48px;
+    bottom: calc(var(--statusbar-height) + max(0px, env(safe-area-inset-bottom)));
+    width: min(88vw, 360px);
+    z-index: 80;
+    transform: translateX(calc(-100% - 12px));
+    transition: transform 180ms ease;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  }
+
+  .workbench.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  /* Chat/right sidebar as a slide-in drawer from the right */
+  .rightbar {
+    display: grid;
+    position: fixed;
+    top: 42px;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--statusbar-height) + max(0px, env(safe-area-inset-bottom)));
+    width: 100vw;
+    max-width: none;
+    z-index: 80;
+    transform: translateX(calc(100% + 12px));
+    transition: transform 180ms ease;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  }
+
+  .workbench.chat-open .rightbar {
+    transform: translateX(0);
+  }
+
+  /* Bottom panel (terminal) as a bottom sheet */
+  .panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--statusbar-height) + max(0px, env(safe-area-inset-bottom)));
+    height: min(56vh, 420px);
+    z-index: 90;
+    transform: translateY(calc(100% + 12px));
+    transition: transform 180ms ease;
+    box-shadow: 0 -24px 80px rgba(0, 0, 0, 0.55);
+  }
+
+  .workbench.panel-open .panel {
+    transform: translateY(0);
+  }
+
+  /* Backdrop to close drawers by tapping outside */
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    top: 42px;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--statusbar-height) + max(0px, env(safe-area-inset-bottom)));
+    border: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.48);
+    z-index: 70;
   }
 
   .macbar-left {
@@ -3165,7 +3671,23 @@ button.status-item:hover {
   }
 }
 
+/* Hide the extra close button on desktop/tablet wide */
+@media (min-width: 901px) {
+  .sidebar-close {
+    display: none;
+  }
+}
+
+/* Backdrop is mobile-only */
+.mobile-backdrop {
+  display: none;
+}
+
 @media (max-width: 600px) {
+  :root {
+    --statusbar-height: 30px;
+  }
+
   /* Reduce page paddings on phones */
   .home,
   .about-page,
@@ -3209,12 +3731,111 @@ button.status-item:hover {
     padding: 0 8px;
   }
 
+  /* Use hamburger instead of the mac traffic dots on mobile */
+  .traffic {
+    display: none;
+  }
+
+  .mobile-hamburger {
+    display: inline-grid;
+  }
+
+  /* Keep the layout buttons visible (Sidebar/Panel/Chat) */
+  .title-nav {
+    display: none;
+  }
+
+  /* Free space for layout buttons on the right */
+  .title-actionbtn[title='Comments'],
+  .title-actionbtn[title='More'] {
+    display: none;
+  }
+
+  .title-divider {
+    display: none;
+  }
+
   .addressbar {
-    width: 100%;
+    width: min(240px, 44vw);
+    min-width: 160px;
   }
 
   .addressbar-inner {
     padding: 0 8px;
+  }
+
+  /* Make the blue status bar readable/usable on small screens */
+  .statusbar {
+    overflow: hidden;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+
+  .status-item {
+    height: 26px;
+    font-size: 11px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .status-left,
+  .status-right {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .status-divider {
+    display: none;
+  }
+
+  /* Mobile: keep only essential status items */
+  .status-spaces,
+  .status-utf,
+  .status-eol,
+  .status-go,
+  .status-theme,
+  .status-loc {
+    display: none;
+  }
+
+  .status-lang {
+    opacity: 0.95;
+  }
+
+  /* Prevent long labels from pushing content out */
+  .status-project span {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: bottom;
+  }
+
+  /* Typewriter line should wrap instead of overflowing the viewport */
+  .typewriter {
+    flex-wrap: wrap;
+  }
+
+  .typewriter-text {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+  }
+}
+
+/* Hide hamburger on desktop */
+@media (min-width: 601px) {
+  .mobile-hamburger {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Avoid editor content being covered when the bottom panel is open */
+  .workbench.panel-open .editor-scroll {
+    padding-bottom: calc(min(56vh, 420px) + 18px);
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 type FileId =
@@ -1280,7 +1280,28 @@ function FileIcon({ ext }: { ext: FileEntry['ext'] }) {
   )
 }
 
-type ActivityId = 'explorer' | 'search' | 'scm' | 'run' | 'extensions' | 'remote' | 'github-actions' | 'package'
+type ActivityId =
+  | 'explorer'
+  | 'search'
+  | 'scm'
+  | 'run'
+  | 'extensions'
+  | 'remote'
+  | 'github-actions'
+  | 'package'
+  | 'settings'
+
+const ACTIVITY_TITLES: Record<ActivityId, string> = {
+  explorer: 'EXPLORER',
+  search: 'SEARCH',
+  scm: 'SOURCE CONTROL',
+  run: 'RUN AND DEBUG',
+  extensions: 'EXTENSIONS',
+  remote: 'REMOTE EXPLORER',
+  'github-actions': 'GITHUB ACTIONS',
+  package: 'CONTAINERS',
+  settings: 'SETTINGS',
+}
 
 function Codicon({
   name,
@@ -2813,6 +2834,9 @@ function IndexHtmlView() {
   const [suggestPos, setSuggestPos] = useState<{ top: number; left: number }>({ top: 40, left: 60 })
   const [suggestReplace, setSuggestReplace] = useState<{ start: number; end: number } | null>(null)
 
+  const [mode, setMode] = useState<'code' | 'preview'>('code')
+  const [previewKey, setPreviewKey] = useState(0)
+
   const highlighted = useMemo(() => highlightHtmlToHtml(value), [value])
   const lineCount = useMemo(() => Math.max(1, value.split('\n').length), [value])
   const pad = useMemo(() => Math.max(2, String(lineCount).length), [lineCount])
@@ -2931,6 +2955,7 @@ function IndexHtmlView() {
       'src',
       'alt',
       'title',
+      'style',
       'rel',
       'target',
       'type',
@@ -2938,6 +2963,12 @@ function IndexHtmlView() {
       'content',
       'charset',
       'lang',
+      'placeholder',
+      'value',
+      'role',
+      'aria-label',
+      'aria-hidden',
+      'tabindex',
     ]
     const items = attrList
       .filter((a) => a.startsWith(attrPrefix.toLowerCase()))
@@ -2978,6 +3009,63 @@ function IndexHtmlView() {
   }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Editor-like behavior: Tab inserts spaces instead of moving focus
+    if (e.key === 'Tab' && !suggestOpen) {
+      e.preventDefault()
+      const textarea = textareaRef.current
+      if (!textarea) return
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const insert = '  '
+      const next = `${value.slice(0, start)}${insert}${value.slice(end)}`
+      setValue(next)
+      closeSuggest()
+      requestAnimationFrame(() => {
+        textarea.focus()
+        const pos = start + insert.length
+        textarea.setSelectionRange(pos, pos)
+        syncScroll()
+      })
+      return
+    }
+
+    // Editor-like behavior: Enter keeps indentation (basic HTML indent)
+    if (e.key === 'Enter' && !suggestOpen) {
+      e.preventDefault()
+      const textarea = textareaRef.current
+      if (!textarea) return
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const before = value.slice(0, start)
+      const after = value.slice(end)
+      const lineStart = before.lastIndexOf('\n') + 1
+      const currentLine = before.slice(lineStart)
+      const baseIndent = (currentLine.match(/^\s+/)?.[0] ?? '')
+      const trimmed = currentLine.trim()
+
+      let extraIndent = ''
+      const isCommentOrMeta = trimmed.startsWith('<!--') || trimmed.startsWith('<!') || trimmed.startsWith('<?')
+      const isClosingTag = /^<\/[A-Za-z]/.test(trimmed)
+      const isOpenTag = /^<([A-Za-z][A-Za-z0-9:-]*)\b[^>]*>$/.test(trimmed)
+      const isSelfClosing = trimmed.endsWith('/>')
+
+      if (!isCommentOrMeta && !isClosingTag && isOpenTag && !isSelfClosing) {
+        extraIndent = '  '
+      }
+
+      const insert = `\n${baseIndent}${extraIndent}`
+      const next = `${value.slice(0, start)}${insert}${after}`
+      setValue(next)
+      closeSuggest()
+      requestAnimationFrame(() => {
+        textarea.focus()
+        const pos = start + insert.length
+        textarea.setSelectionRange(pos, pos)
+        syncScroll()
+      })
+      return
+    }
+
     if (e.altKey && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
       e.preventDefault()
       const textarea = textareaRef.current
@@ -3019,58 +3107,100 @@ function IndexHtmlView() {
 
   return (
     <div className="editor-scroll index-editor">
-      <div ref={gutterRef} className="index-gutter" aria-hidden="true">
-        {Array.from({ length: lineCount }, (_, idx) => (
-          <div key={idx} className="index-ln">
-            {String(idx + 1).padStart(pad, ' ')}
-          </div>
-        ))}
+      <div className="index-toolbar" aria-label="Index toolbar">
+        <div className="index-toolbar-left">index.html</div>
+        <div className="index-toolbar-right">
+          <button
+            type="button"
+            className="iconbtn"
+            aria-label={mode === 'preview' ? 'Show code' : 'Show preview'}
+            title={mode === 'preview' ? 'Show code' : 'Show preview'}
+            onClick={() => {
+              setMode((m) => (m === 'preview' ? 'code' : 'preview'))
+              closeSuggest()
+            }}
+          >
+            <Codicon name={mode === 'preview' ? 'code' : 'open-preview'} />
+          </button>
+          <button
+            type="button"
+            className="iconbtn"
+            aria-label="Refresh preview"
+            title="Refresh preview"
+            onClick={() => setPreviewKey((k) => k + 1)}
+          >
+            <Codicon name="refresh" />
+          </button>
+        </div>
       </div>
-      <div className="index-wrap">
-        <span ref={measureRef} className="index-measure">
-          M
-        </span>
-        <pre
-          ref={highlightRef}
-          className="index-highlight"
-          aria-hidden="true"
-          dangerouslySetInnerHTML={{ __html: highlighted }}
-        />
-        <textarea
-          ref={textareaRef}
-          className="index-textarea"
-          value={value}
-          onChange={(e) => {
-            const nextValue = e.target.value
-            setValue(nextValue)
-            openSuggestFromValue(nextValue)
-          }}
-          onScroll={syncScroll}
-          onKeyDown={onKeyDown}
-          onClick={() => openSuggestFromValue(value)}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-        />
-        {suggestOpen && suggestItems.length > 0 && (
-          <div className="index-suggest" style={{ top: `${suggestPos.top}px`, left: `${suggestPos.left}px` }}>
-            {suggestItems.map((it, idx) => (
-              <button
-                key={`${it.kind}-${it.label}`}
-                type="button"
-                className={`index-suggest-item${idx === suggestIndex ? ' is-active' : ''}`}
-                onMouseDown={(ev) => {
-                  ev.preventDefault()
-                  applyCompletion(it)
-                }}
-              >
-                <span className="index-suggest-kind">{it.kind}</span>
-                <span className="index-suggest-label">{it.label}</span>
-              </button>
+
+      {mode === 'preview' ? (
+        <div className="index-preview" role="region" aria-label="Preview">
+          <iframe
+            key={previewKey}
+            className="index-preview-frame"
+            title="index.html preview"
+            // allow links to open in a new tab from srcDoc (target=_blank)
+            sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+            srcDoc={value}
+          />
+        </div>
+      ) : (
+        <>
+          <div ref={gutterRef} className="index-gutter" aria-hidden="true">
+            {Array.from({ length: lineCount }, (_, idx) => (
+              <div key={idx} className="index-ln">
+                {String(idx + 1).padStart(pad, ' ')}
+              </div>
             ))}
           </div>
-        )}
-      </div>
+          <div className="index-wrap">
+            <span ref={measureRef} className="index-measure">
+              M
+            </span>
+            <pre
+              ref={highlightRef}
+              className="index-highlight"
+              aria-hidden="true"
+              dangerouslySetInnerHTML={{ __html: highlighted }}
+            />
+            <textarea
+              ref={textareaRef}
+              className="index-textarea"
+              value={value}
+              onChange={(e) => {
+                const nextValue = e.target.value
+                setValue(nextValue)
+                openSuggestFromValue(nextValue)
+              }}
+              onScroll={syncScroll}
+              onKeyDown={onKeyDown}
+              onClick={() => openSuggestFromValue(value)}
+              spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+            />
+            {suggestOpen && suggestItems.length > 0 && (
+              <div className="index-suggest" style={{ top: `${suggestPos.top}px`, left: `${suggestPos.left}px` }}>
+                {suggestItems.map((it, idx) => (
+                  <button
+                    key={`${it.kind}-${it.label}`}
+                    type="button"
+                    className={`index-suggest-item${idx === suggestIndex ? ' is-active' : ''}`}
+                    onMouseDown={(ev) => {
+                      ev.preventDefault()
+                      applyCompletion(it)
+                    }}
+                  >
+                    <span className="index-suggest-kind">{it.kind}</span>
+                    <span className="index-suggest-label">{it.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -3194,6 +3324,18 @@ function App() {
   const allFiles = FILE_TREE.children
 
   const [activeActivity, setActiveActivity] = useState<ActivityId>('explorer')
+  const [selectedTheme, setSelectedTheme] = useState<
+    | 'Dark (Visual Studio)'
+    | 'Light (Visual Studio)'
+    | 'Dark+ (default dark)'
+    | 'Light+ (default light)'
+    | 'Monokai'
+    | 'Solarized Dark'
+    | 'Solarized Light'
+    | 'Quiet Light'
+    | 'Dark High Contrast'
+    | 'Light High Contrast'
+  >('Dark (Visual Studio)')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isTerminalOpen, setIsTerminalOpen] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(true)
@@ -3211,10 +3353,18 @@ function App() {
 
   const [openTabs, setOpenTabs] = useState<FileId[]>(['home.tsx'])
   const [activeTab, setActiveTab] = useState<FileId>('home.tsx')
+  const activeTabRef = useRef<FileId>('home.tsx')
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
 
   const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false)
   const [quickOpenQuery, setQuickOpenQuery] = useState('')
   const [quickOpenSelectedIndex, setQuickOpenSelectedIndex] = useState(0)
+  const [activeMacMenu, setActiveMacMenu] = useState<
+    null | 'File' | 'Edit' | 'Selection' | 'View' | 'Go' | 'Run' | 'Terminal' | 'Help' | 'Copilot'
+  >(null)
+  const macbarRef = useRef<HTMLElement | null>(null)
   const [now, setNow] = useState(() => new Date())
   const initialChatState = useMemo(() => loadChatStateFromStorage(), [])
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatState.threads)
@@ -3255,23 +3405,89 @@ function App() {
 
   const chatMessages = activeChatThread.messages
 
+  const closeSidebarOnMobile = () => {
+    if (typeof window === 'undefined') return
+    if (window.matchMedia('(max-width: 900px)').matches) {
+      setIsSidebarOpen(false)
+    }
+  }
+
+  const closeOverlaysOnMobile = () => {
+    if (typeof window === 'undefined') return
+    if (!window.matchMedia('(max-width: 900px)').matches) return
+    setIsSidebarOpen(false)
+    setIsChatOpen(false)
+    setIsTerminalOpen(false)
+  }
+
+  const toggleTerminal = () => {
+    setIsTerminalOpen((v) => {
+      const next = !v
+      if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches && next) {
+        // On mobile: keep one overlay at a time (terminal vs chat)
+        setIsChatOpen(false)
+      }
+      return next
+    })
+  }
+
+  const toggleChat = () => {
+    setIsChatOpen((v) => {
+      const next = !v
+      if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches && next) {
+        // On mobile: keep one overlay at a time (chat vs terminal)
+        setIsTerminalOpen(false)
+      }
+      return next
+    })
+  }
+
+  const openQuickOpen = () => {
+    setIsQuickOpenOpen(true)
+    setQuickOpenQuery('')
+    setQuickOpenSelectedIndex(0)
+  }
+
+  const openExternal = (url: string) => {
+    if (typeof window === 'undefined') return
+    window.open(url, '_blank', 'noreferrer')
+  }
+
+  const openSidebarFromActivity = (id: ActivityId) => {
+    setActiveActivity(id)
+    setIsSidebarOpen(true)
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
+      // On mobile: don't stack overlays
+      setIsChatOpen(false)
+      setIsTerminalOpen(false)
+    }
+  }
+
   const openFile = (id: FileId) => {
     setOpenTabs((tabs) => (tabs.includes(id) ? tabs : [...tabs, id]))
     setActiveTab(id)
+    closeSidebarOnMobile()
   }
 
-  const closeTab = (id: FileId) => {
+  const closeTab = useCallback((id: FileId) => {
     setOpenTabs((tabs) => {
       const idx = tabs.indexOf(id)
       const nextTabs = tabs.filter((t) => t !== id)
 
-      if (id === activeTab) {
+      if (id === activeTabRef.current) {
         const nextActive = nextTabs[idx] ?? nextTabs[idx - 1] ?? 'home.tsx'
         setActiveTab(nextActive)
       }
 
       return nextTabs.length === 0 ? ['home.tsx'] : nextTabs
     })
+  }, [])
+
+  const closeActiveTab = useCallback(() => closeTab(activeTabRef.current), [closeTab])
+
+  const closeAllTabs = () => {
+    setOpenTabs(['home.tsx'])
+    setActiveTab('home.tsx')
   }
 
   useEffect(() => {
@@ -3643,13 +3859,12 @@ function App() {
 
       if (mod && (e.key === 'p' || e.key === 'P')) {
         e.preventDefault()
-        setIsQuickOpenOpen(true)
-        setQuickOpenQuery('')
-        setQuickOpenSelectedIndex(0)
+        openQuickOpen()
         return
       }
 
-      if (mod && e.key === '`') {
+      // Use `code` so it works across keyboard layouts (e.g. IT layout)
+      if (mod && (e.code === 'Backquote' || e.key === '`')) {
         e.preventDefault()
         setIsTerminalOpen((v) => !v)
       }
@@ -3659,7 +3874,26 @@ function App() {
         setIsSidebarOpen((v) => !v)
       }
 
+      if (mod && (e.key === 't' || e.key === 'T')) {
+        e.preventDefault()
+        openQuickOpen()
+      }
+
+      if (mod && (e.key === 'w' || e.key === 'W')) {
+        e.preventDefault()
+        closeActiveTab()
+      }
+
+      if (mod && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+        e.preventDefault()
+        toggleChat()
+      }
+
       if (e.key === 'Escape') {
+        if (activeMacMenu) {
+          setActiveMacMenu(null)
+          return
+        }
         if (isQuickOpenOpen) {
           setIsQuickOpenOpen(false)
           return
@@ -3669,7 +3903,18 @@ function App() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isQuickOpenOpen])
+  }, [activeMacMenu, closeActiveTab, isQuickOpenOpen])
+
+  useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      const root = macbarRef.current
+      if (!root) return
+      if (!(e.target instanceof Node)) return
+      if (!root.contains(e.target)) setActiveMacMenu(null)
+    }
+    window.addEventListener('pointerdown', onPointerDown)
+    return () => window.removeEventListener('pointerdown', onPointerDown)
+  }, [])
 
   useEffect(() => {
     const tick = () => setNow(new Date())
@@ -3772,20 +4017,468 @@ function App() {
 
   return (
     <div className="desktop" ref={desktopRef}>
-      <header className="macbar" aria-label="Menu bar">
+      <header className="macbar" aria-label="Menu bar" ref={macbarRef}>
         <div className="macbar-left">
           <span className="mac-apple" aria-hidden="true">
             
           </span>
           <span className="mac-app">Code</span>
           <nav className="macmenu" aria-label="Application menu">
-            {['File', 'Edit', 'Selection', 'View', 'Go', 'Run', 'Terminal', 'Window', 'Help'].map(
-              (item) => (
-                <button key={item} type="button" className="macmenu-item">
+            {(
+              ['File', 'Edit', 'Selection', 'View', 'Go', 'Run', 'Terminal', 'Help', 'Copilot'] as const
+            ).map((item) => (
+              <div
+                key={item}
+                className="macmenu-root"
+                onMouseEnter={() => {
+                  if (activeMacMenu) setActiveMacMenu(item)
+                }}
+              >
+                <button
+                  type="button"
+                  className="macmenu-item"
+                  aria-haspopup="menu"
+                  aria-expanded={activeMacMenu === item}
+                  onClick={() => setActiveMacMenu((prev) => (prev === item ? null : item))}
+                >
                   {item}
                 </button>
-              ),
-            )}
+
+                {activeMacMenu === item ? (
+                  <div className="macmenu-popover" role="menu" aria-label={`${item} menu`}>
+                    {item === 'File' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openQuickOpen()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>New Tab</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+T</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openQuickOpen()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Open File…</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+P</span>
+                        </button>
+                        <div className="macmenu-sep" role="separator" />
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            closeActiveTab()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Close Tab</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+W</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            closeAllTabs()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Close All Tabs</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                        <div className="macmenu-sep" role="separator" />
+                        <div className="macmenu-dd-header">OPEN RECENT</div>
+                        {Array.from(new Set(openTabs.slice().reverse()))
+                          .slice(0, 7)
+                          .map((id) => {
+                            const entry = allFiles.find((f) => f.id === id)
+                            if (!entry) return null
+                            return (
+                              <button
+                                key={id}
+                                type="button"
+                                className="macmenu-dd-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  openFile(id)
+                                  setActiveMacMenu(null)
+                                }}
+                              >
+                                <span>{entry.label}</span>
+                                <span className="macmenu-dd-shortcut" />
+                              </button>
+                            )
+                          })}
+                        <div className="macmenu-sep" role="separator" />
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openFile('resume.pdf')
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Download Resume</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                      </>
+                    ) : null}
+
+                    {item === 'Edit' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openQuickOpen()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Find…</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+F</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            document.execCommand?.('selectAll')
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Select All</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+A</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            document.execCommand?.('copy')
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Copy</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+C</span>
+                        </button>
+                      </>
+                    ) : null}
+
+                    {item === 'Selection' ? (
+                      <>
+                        <div className="macmenu-dd-header">SELECTION</div>
+                        <button type="button" className="macmenu-dd-item is-disabled" role="menuitem" disabled>
+                          <span>Expand Selection</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                        <button type="button" className="macmenu-dd-item is-disabled" role="menuitem" disabled>
+                          <span>Shrink Selection</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                      </>
+                    ) : null}
+
+                    {item === 'View' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openQuickOpen()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Command Palette</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+P</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            setIsSidebarOpen((v) => !v)
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Toggle Sidebar</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+B</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            toggleTerminal()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Toggle Terminal</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+`</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            toggleChat()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Toggle Copilot ✨</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+Shift+C</span>
+                        </button>
+                        <div className="macmenu-sep" role="separator" />
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            if (document.fullscreenElement) {
+                              void document.exitFullscreen?.()
+                            } else {
+                              void document.documentElement.requestFullscreen?.()
+                            }
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Enter Full Screen</span>
+                          <span className="macmenu-dd-shortcut">F11</span>
+                        </button>
+                      </>
+                    ) : null}
+
+                    {item === 'Go' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openQuickOpen()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Go to File…</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+P</span>
+                        </button>
+                        <div className="macmenu-sep" role="separator" />
+                        <div className="macmenu-dd-header">FILES</div>
+                        {allFiles.slice(0, 12).map((f) => (
+                          <button
+                            key={f.id}
+                            type="button"
+                            className="macmenu-dd-item"
+                            role="menuitem"
+                            onClick={() => {
+                              openFile(f.id)
+                              setActiveMacMenu(null)
+                            }}
+                          >
+                            <span>{f.label}</span>
+                            <span className="macmenu-dd-shortcut" />
+                          </button>
+                        ))}
+                      </>
+                    ) : null}
+
+                    {item === 'Run' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            setIsTerminalOpen(true)
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Start Terminal</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+`</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`macmenu-dd-item ${terminalHistory.length === 0 ? 'is-disabled' : ''}`}
+                          role="menuitem"
+                          disabled={terminalHistory.length === 0}
+                          onClick={() => {
+                            const last = terminalHistory[terminalHistory.length - 1]
+                            if (last) void execTerminal(last)
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Run Last Command</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                      </>
+                    ) : null}
+
+                    {item === 'Terminal' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            setIsTerminalOpen(true)
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>New Terminal</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+`</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            toggleTerminal()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Toggle Terminal</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+`</span>
+                        </button>
+                        <div className="macmenu-sep" role="separator" />
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            setTerminalEntries([])
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Clear Terminal</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                      </>
+                    ) : null}
+
+                    {item === 'Help' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openQuickOpen()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Command Palette</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+P</span>
+                        </button>
+                        <div className="macmenu-sep" role="separator" />
+                        <div className="macmenu-dd-header">KEYBOARD SHORTCUTS</div>
+                        <div className="macmenu-kbrow">
+                          <span className="macmenu-kbkey">Ctrl+P</span>
+                          <span className="macmenu-kbtext">Go to file</span>
+                        </div>
+                        <div className="macmenu-kbrow">
+                          <span className="macmenu-kbkey">Ctrl+B</span>
+                          <span className="macmenu-kbtext">Toggle sidebar</span>
+                        </div>
+                        <div className="macmenu-kbrow">
+                          <span className="macmenu-kbkey">Ctrl+`</span>
+                          <span className="macmenu-kbtext">Toggle terminal</span>
+                        </div>
+                        <div className="macmenu-kbrow">
+                          <span className="macmenu-kbkey">Ctrl+Shift+C</span>
+                          <span className="macmenu-kbtext">Toggle Copilot ✨</span>
+                        </div>
+                        <div className="macmenu-kbrow">
+                          <span className="macmenu-kbkey">Esc</span>
+                          <span className="macmenu-kbtext">Close overlay</span>
+                        </div>
+                        <div className="macmenu-sep" role="separator" />
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openExternal('https://github.com/henry8913')
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>GitHub ↗</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            openFile('about.html')
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>About</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                      </>
+                    ) : null}
+
+                    {item === 'Copilot' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            resetChat()
+                            setIsChatOpen(true)
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>New Chat</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            toggleChat()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Toggle Copilot</span>
+                          <span className="macmenu-dd-shortcut">Ctrl+Shift+C</span>
+                        </button>
+                        <div className="macmenu-sep" role="separator" />
+                        <button
+                          type="button"
+                          className="macmenu-dd-item"
+                          role="menuitem"
+                          onClick={() => {
+                            // ripulisce solo la chat corrente creando un nuovo thread
+                            resetChat()
+                            setActiveMacMenu(null)
+                          }}
+                        >
+                          <span>Clear Chat</span>
+                          <span className="macmenu-dd-shortcut" />
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ))}
           </nav>
         </div>
         <div className="macbar-right" aria-label="System status">
@@ -3871,6 +4564,15 @@ function App() {
       >
         <header className="titlebar">
         <div className="title-left">
+          <button
+            type="button"
+            className="title-actionbtn mobile-hamburger"
+            aria-label="Open Sidebar"
+            title="Open Sidebar"
+            onClick={() => openSidebarFromActivity(activeActivity)}
+          >
+            <Codicon name="menu" />
+          </button>
           <div className="traffic" aria-hidden="true">
             <span className="dot red" />
             <span className="dot yellow" />
@@ -3937,7 +4639,7 @@ function App() {
             className="title-actionbtn"
             aria-label="Toggle Panel"
             title="Toggle Panel"
-            onClick={() => setIsTerminalOpen((v) => !v)}
+            onClick={toggleTerminal}
           >
             <Codicon name="layout-panel" />
           </button>
@@ -3946,7 +4648,7 @@ function App() {
             className="title-actionbtn"
             aria-label="Toggle Secondary Sidebar"
             title="Toggle Secondary Sidebar"
-            onClick={() => setIsChatOpen((v) => !v)}
+            onClick={toggleChat}
           >
             <Codicon name="layout-sidebar-right" />
           </button>
@@ -3976,7 +4678,7 @@ function App() {
                 className={`activity-btn ${activeActivity === a.id ? 'active' : ''}`}
                 aria-label={a.label}
                 title={a.label}
-                onClick={() => setActiveActivity(a.id)}
+                onClick={() => openSidebarFromActivity(a.id)}
               >
                 {a.id === 'github-actions' ? (
                   <svg
@@ -4000,18 +4702,42 @@ function App() {
             <button type="button" className="activity-btn" aria-label="Accounts" title="Accounts">
               <Codicon name="account" />
             </button>
-            <button type="button" className="activity-btn" aria-label="Manage" title="Manage">
+            <button
+              type="button"
+              className="activity-btn"
+              aria-label="Settings"
+              title="Settings"
+              onClick={() => openSidebarFromActivity('settings')}
+            >
               <Codicon name="settings-gear" />
             </button>
           </div>
         </aside>
 
+        {(isSidebarOpen || isChatOpen || isTerminalOpen) && (
+          <button
+            type="button"
+            className="mobile-backdrop"
+            aria-label="Close overlays"
+            onClick={closeOverlaysOnMobile}
+          />
+        )}
+
         {isSidebarOpen ? (
           <>
-            <aside className="sidebar" aria-label="Explorer">
+            <aside className="sidebar" aria-label={ACTIVITY_TITLES[activeActivity]}>
               <div className="sidebar-header">
-                <div className="sidebar-title">EXPLORER</div>
+                <div className="sidebar-title">{ACTIVITY_TITLES[activeActivity]}</div>
                 <div className="sidebar-actions">
+                  <button
+                    type="button"
+                    className="iconbtn sidebar-close"
+                    aria-label="Close sidebar"
+                    title="Close sidebar"
+                    onClick={() => setIsSidebarOpen(false)}
+                  >
+                    <Codicon name="close" />
+                  </button>
                   <button type="button" className="iconbtn" aria-label="More actions" title="More actions">
                     <Codicon name="ellipsis" />
                   </button>
@@ -4019,7 +4745,134 @@ function App() {
               </div>
 
               <div className="tree">
-                <button type="button" className="section-header" onClick={() => setIsOpenEditorsOpen((v) => !v)}>
+                {activeActivity === 'settings' ? (
+                  <div className="settings-panel">
+                    <button
+                      type="button"
+                      className="settings-copilotbtn"
+                      onClick={() => {
+                        setIsChatOpen(true)
+                        if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
+                          setIsTerminalOpen(false)
+                        }
+                        closeSidebarOnMobile()
+                      }}
+                    >
+                      <span className="settings-copilotbtn-left">
+                        <span className="settings-copilot-spark" aria-hidden="true">
+                          ✦
+                        </span>
+                        <span>Open HenryAI&apos;s Copilot</span>
+                      </span>
+                      <span className="settings-copilotbtn-right">
+                        <span className="settings-chip">AI</span>
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="settings-terminalbtn"
+                      onClick={() => {
+                        setIsTerminalOpen(true)
+                        if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
+                          setIsChatOpen(false)
+                        }
+                        closeSidebarOnMobile()
+                      }}
+                    >
+                      <span className="settings-terminalbtn-left">
+                        <span className="settings-terminal-icon" aria-hidden="true">
+                          <Codicon name="terminal" />
+                        </span>
+                        <span>Open Terminal</span>
+                      </span>
+                      <span className="settings-terminalbtn-right">
+                        <span className="settings-chip settings-chip-terminal">TERM</span>
+                      </span>
+                    </button>
+
+                    <div className="settings-section">
+                      <div className="settings-sectiontitle">COLOR THEME</div>
+                      <div className="settings-list">
+                        {(
+                          [
+                            'Dark (Visual Studio)',
+                            'Light (Visual Studio)',
+                            'Dark+ (default dark)',
+                            'Light+ (default light)',
+                            'Monokai',
+                            'Solarized Dark',
+                            'Solarized Light',
+                            'Quiet Light',
+                            'Dark High Contrast',
+                            'Light High Contrast',
+                          ] as const
+                        ).map((name) => (
+                            <button
+                              key={name}
+                              type="button"
+                              className={`settings-item ${selectedTheme === name ? 'is-active' : ''}`}
+                              onClick={() => setSelectedTheme(name)}
+                            >
+                              <span className="settings-dot" aria-hidden="true" />
+                              <span className="settings-itemlabel">{name}</span>
+                              {selectedTheme === name ? (
+                                <span className="settings-check" aria-hidden="true">
+                                  ✓
+                                </span>
+                              ) : null}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+
+                    <div className="settings-section">
+                      <div className="settings-sectiontitle">KEYBOARD SHORTCUTS</div>
+                      <div className="settings-kb">
+                        <div className="settings-kbrow">
+                          <span className="settings-kbkey">Cmd/Ctrl+P</span>
+                          <span className="settings-kbtext">Quick Open (cerca/apri file)</span>
+                        </div>
+                        <div className="settings-kbrow">
+                          <span className="settings-kbkey">Cmd/Ctrl+B</span>
+                          <span className="settings-kbtext">Toggle Sidebar</span>
+                        </div>
+                        <div className="settings-kbrow">
+                          <span className="settings-kbkey">Cmd/Ctrl+`</span>
+                          <span className="settings-kbtext">Toggle Terminal</span>
+                        </div>
+                        <div className="settings-kbrow">
+                          <span className="settings-kbkey">Esc</span>
+                          <span className="settings-kbtext">Chiudi Quick Open / overlay</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="settings-section">
+                      <div className="settings-sectiontitle">LINKS</div>
+                      <div className="settings-list">
+                        <a className="settings-link" href="https://github.com/henry8913" target="_blank" rel="noreferrer">
+                          GitHub
+                        </a>
+                        <a
+                          className="settings-link"
+                          href="https://www.linkedin.com/in/henry-g-full-web-stack-developer/"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          LinkedIn
+                        </a>
+                        <a className="settings-link" href="https://medium.com" target="_blank" rel="noreferrer">
+                          Medium
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeActivity !== 'settings' ? (
+                  <>
+                    <button type="button" className="section-header" onClick={() => setIsOpenEditorsOpen((v) => !v)}>
                   <span className="section-caret" aria-hidden="true">
                     {isOpenEditorsOpen ? <Codicon name="chevron-down" /> : <Codicon name="chevron-right" />}
                   </span>
@@ -4036,7 +4889,10 @@ function App() {
                           key={tabId}
                           type="button"
                           className={`tree-item ${tabId === activeTab ? 'active' : ''}`}
-                          onClick={() => setActiveTab(tabId)}
+                          onClick={() => {
+                            setActiveTab(tabId)
+                            closeSidebarOnMobile()
+                          }}
                         >
                           <FileIcon ext={f.ext} />
                           <span className="tree-label">{f.label}</span>
@@ -4089,7 +4945,14 @@ function App() {
                   type="button"
                   className={`tree-item tree-item-copilot ${isChatOpen ? '' : ''}`}
                   aria-label="Open AI chat"
-                  onClick={() => setIsChatOpen(true)}
+                  onClick={() => {
+                    setIsChatOpen(true)
+                    // On mobile: don't stack chat on top of the terminal
+                    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
+                      setIsTerminalOpen(false)
+                    }
+                    closeSidebarOnMobile()
+                  }}
                 >
                   <span className="file-icon" style={{ color: '#4fc1ff' }} aria-hidden="true">
                     <Codicon name="copilot" />
@@ -4099,6 +4962,29 @@ function App() {
                     AI
                   </span>
                 </button>
+
+                <button
+                  type="button"
+                  className="tree-item tree-item-terminal"
+                  aria-label="Open terminal"
+                  onClick={() => {
+                    setIsTerminalOpen(true)
+                    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
+                      setIsChatOpen(false)
+                    }
+                    closeSidebarOnMobile()
+                  }}
+                >
+                  <span className="file-icon" style={{ color: 'rgba(106, 153, 85, 0.95)' }} aria-hidden="true">
+                    <Codicon name="terminal" />
+                  </span>
+                  <span className="tree-label">Terminal</span>
+                  <span className="tree-badge tree-badge-terminal" aria-hidden="true">
+                    TERM
+                  </span>
+                </button>
+                  </>
+                ) : null}
               </div>
             </aside>
             <div
@@ -4413,34 +5299,34 @@ function App() {
 
       <footer className="statusbar" aria-label="Status bar">
         <div className="status-left">
-          <div className="status-item status-inline">
+          <div className="status-item status-inline status-branch">
             <Codicon name="remote" />
             <Codicon name="git-branch" />
             <span>main</span>
           </div>
-          <div className="status-item status-inline">
+          <div className="status-item status-inline status-project">
             <Codicon name="sync" />
             <span>{FILE_TREE.label}</span>
           </div>
         </div>
         <div className="status-right">
-          <div className="status-item">Ln 1, Col 1</div>
-          <div className="status-item">Spaces: 4</div>
-          <div className="status-item">UTF-8</div>
-          <div className="status-item">LF</div>
-          <div className="status-item">{statusLanguage}</div>
+          <div className="status-item status-loc">Ln 1, Col 1</div>
+          <div className="status-item status-spaces">Spaces: 4</div>
+          <div className="status-item status-utf">UTF-8</div>
+          <div className="status-item status-eol">LF</div>
+          <div className="status-item status-lang">{statusLanguage}</div>
           <div className="status-divider" aria-hidden="true" />
-          <div className="status-item status-inline">
+          <div className="status-item status-inline status-go">
             <Codicon name="radio-tower" />
             <span>Go Live</span>
           </div>
-          <div className="status-item status-dropdown">
-            Dark (Visual Studio) <Codicon name="chevron-down" className="status-dropdown-icon" />
+          <div className="status-item status-dropdown status-theme">
+            {selectedTheme} <Codicon name="chevron-down" className="status-dropdown-icon" />
           </div>
-          <div className="status-item status-icon">
+          <div className="status-item status-icon status-copilot">
             <Codicon name="copilot" />
           </div>
-          <div className="status-item status-icon">
+          <div className="status-item status-icon status-bell">
             <Codicon name="bell" />
           </div>
         </div>
