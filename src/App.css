@@ -746,6 +746,7 @@
   gap: 8px;
   align-items: flex-start;
   animation: msgIn var(--dur-med) var(--ease-out);
+  min-width: 0;
 }
 
 .chat-msg.user {
@@ -766,6 +767,7 @@
 
 .chat-bubble {
   max-width: 92%;
+  min-width: 0;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
@@ -774,6 +776,9 @@
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
+  overflow-wrap: anywhere; /* mobile: wrap URL/parole lunghe */
+  word-break: break-word; /* fallback */
+  hyphens: auto;
   transition:
     background var(--dur-fast) var(--ease-out),
     border-color var(--dur-fast) var(--ease-out),
