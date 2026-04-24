@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 type FileId =
@@ -84,6 +84,113 @@ type TerminalEntry = {
   kind: TerminalEntryKind
   text: string
   cwd?: string
+}
+
+const THEME_NAMES = [
+  'Dark (Visual Studio)',
+  'Solarized Dark',
+  'Red',
+  'Kimbie Dark',
+  'Dark High Contrast',
+] as const
+type ThemeName = (typeof THEME_NAMES)[number]
+
+const THEME_VARS: Record<ThemeName, Record<string, string>> = {
+  'Dark (Visual Studio)': {
+    '--vscode-bg': '#1e1e1e',
+    '--vscode-fg': '#d4d4d4',
+    '--vscode-muted': '#9da0a6',
+    '--vscode-border': '#2a2a2a',
+    '--vscode-elev': '#252526',
+    '--vscode-elev-2': '#2d2d2d',
+    '--vscode-tab': '#2d2d2d',
+    '--vscode-tab-active': '#1e1e1e',
+    '--vscode-accent': '#007acc',
+    '--vscode-accent-2': '#c586c0',
+    '--vscode-green': '#6a9955',
+    '--vscode-orange': '#ce9178',
+    '--vscode-blue': '#4fc1ff',
+    '--vscode-pink': '#d16d9e',
+    '--statusbar-bg': '#007acc',
+    '--focus-ring': '0 0 0 2px rgba(0, 122, 204, 0.35)',
+    colorScheme: 'dark',
+  },
+  'Solarized Dark': {
+    '--vscode-bg': '#002b36',
+    '--vscode-fg': '#93a1a1',
+    '--vscode-muted': '#839496',
+    '--vscode-border': '#073642',
+    '--vscode-elev': '#073642',
+    '--vscode-elev-2': '#0b3c49',
+    '--vscode-tab': '#073642',
+    '--vscode-tab-active': '#002b36',
+    '--vscode-accent': '#268bd2',
+    '--vscode-accent-2': '#b58900',
+    '--vscode-green': '#859900',
+    '--vscode-orange': '#cb4b16',
+    '--vscode-blue': '#2aa198',
+    '--vscode-pink': '#d33682',
+    '--statusbar-bg': '#268bd2',
+    '--focus-ring': '0 0 0 2px rgba(38, 139, 210, 0.4)',
+    colorScheme: 'dark',
+  },
+  Red: {
+    '--vscode-bg': '#2b0b0b',
+    '--vscode-fg': '#f1dada',
+    '--vscode-muted': '#caa7a7',
+    '--vscode-border': '#4c1919',
+    '--vscode-elev': '#351010',
+    '--vscode-elev-2': '#421515',
+    '--vscode-tab': '#421515',
+    '--vscode-tab-active': '#2b0b0b',
+    '--vscode-accent': '#ff5a5a',
+    '--vscode-accent-2': '#ffb4b4',
+    '--vscode-green': '#7ee787',
+    '--vscode-orange': '#ff9b6a',
+    '--vscode-blue': '#79c0ff',
+    '--vscode-pink': '#ff77aa',
+    '--statusbar-bg': '#b3261e',
+    '--focus-ring': '0 0 0 2px rgba(255, 90, 90, 0.45)',
+    colorScheme: 'dark',
+  },
+  'Kimbie Dark': {
+    '--vscode-bg': '#221a0f',
+    '--vscode-fg': '#d3af86',
+    '--vscode-muted': '#b39b7d',
+    '--vscode-border': '#3a2f21',
+    '--vscode-elev': '#2a2216',
+    '--vscode-elev-2': '#33291c',
+    '--vscode-tab': '#33291c',
+    '--vscode-tab-active': '#221a0f',
+    '--vscode-accent': '#f06431',
+    '--vscode-accent-2': '#f2c35e',
+    '--vscode-green': '#889b4a',
+    '--vscode-orange': '#dc9656',
+    '--vscode-blue': '#7e9fc9',
+    '--vscode-pink': '#c07a8a',
+    '--statusbar-bg': '#a35b1f',
+    '--focus-ring': '0 0 0 2px rgba(240, 100, 49, 0.45)',
+    colorScheme: 'dark',
+  },
+  'Dark High Contrast': {
+    '--vscode-bg': '#000000',
+    '--vscode-fg': '#ffffff',
+    '--vscode-muted': '#d0d0d0',
+    '--vscode-border': '#bfbfbf',
+    '--vscode-elev': '#0b0b0b',
+    '--vscode-elev-2': '#111111',
+    '--vscode-tab': '#111111',
+    '--vscode-tab-active': '#000000',
+    '--vscode-accent': '#ffb000',
+    '--vscode-accent-2': '#00ffff',
+    '--vscode-green': '#00ff00',
+    '--vscode-orange': '#ffb000',
+    '--vscode-blue': '#00b7ff',
+    '--vscode-pink': '#ff4dff',
+    '--statusbar-bg': '#000000',
+    '--focus-ring': '0 0 0 2px rgba(255, 176, 0, 0.55)',
+    colorScheme: 'dark',
+  },
 }
 
 const FILE_TREE: FolderEntry = {
@@ -1052,6 +1159,131 @@ function saveChatStateToStorage(threads: ChatThread[], activeThreadId: string) {
       })),
     }
     window.localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(payload))
+  } catch {
+    return
+  }
+}
+
+const TERMINAL_STORAGE_KEY = 'henrydev.terminal.v1'
+const TERMINAL_MAX_SAVED_ENTRIES = 400
+const TERMINAL_MAX_SAVED_HISTORY = 200
+
+type TerminalCommandSpec = {
+  name: string
+  aliases?: string[]
+  usage: string
+  description: string
+}
+
+const TERMINAL_COMMANDS: readonly TerminalCommandSpec[] = [
+  { name: 'help', aliases: ['man'], usage: 'help [cmd]', description: 'Lista comandi o dettagli su un comando' },
+  { name: 'clear', aliases: ['cls'], usage: 'clear', description: 'Pulisce lo schermo del terminale' },
+  { name: 'welcome', usage: 'welcome', description: 'Stampa il banner di benvenuto' },
+  { name: 'reset', usage: 'reset', description: 'Reset terminale (welcome + cwd + history)' },
+  { name: 'ls', usage: 'ls [path]', description: 'Lista file/cartelle (simulato)' },
+  { name: 'tree', usage: 'tree', description: 'Stampa la struttura del progetto (simulato)' },
+  { name: 'open', aliases: ['code'], usage: 'open <file>', description: 'Apre un file nell’editor' },
+  { name: 'cat', usage: 'cat <file>', description: 'Mostra anteprima contenuto file' },
+  { name: 'pwd', usage: 'pwd', description: 'Mostra la directory corrente' },
+  { name: 'cd', usage: 'cd <path>', description: 'Cambia directory (simulato)' },
+  { name: 'find', usage: 'find <query>', description: 'Cerca file per nome (simulato)' },
+  { name: 'grep', usage: 'grep <pattern> <file>', description: 'Cerca testo dentro un file (simulato)' },
+  { name: 'history', usage: 'history [-c]', description: 'Mostra o pulisce lo storico comandi' },
+  { name: 'theme', usage: 'theme <name> | theme list', description: 'Cambia tema dell’editor' },
+  { name: 'themes', usage: 'themes', description: 'Elenca i temi disponibili' },
+  { name: 'echo', usage: 'echo <text>', description: 'Stampa testo' },
+  { name: 'date', usage: 'date', description: 'Mostra data/ora' },
+  { name: 'whoami', usage: 'whoami', description: 'Chi sei (spoiler: henry)' },
+  { name: 'neofetch', usage: 'neofetch', description: 'System info “figata” (simulata)' },
+  { name: 'fortune', usage: 'fortune', description: 'Una frase random' },
+  { name: 'calc', usage: 'calc <expr>', description: 'Calcolatrice veloce (solo + - * / % () )' },
+  { name: 'copy', usage: 'copy [--all|text]', description: 'Copia in clipboard l’output o del testo' },
+  { name: 'links', usage: 'links', description: 'Link e contatti' },
+  { name: 'henryai', aliases: ['chat'], usage: 'henryai', description: 'Apre la chat a destra' },
+  { name: 'npm', usage: 'npm run <dev|build>', description: 'Simula script npm' },
+  { name: 'git', usage: 'git status', description: 'Simula git status' },
+]
+
+function terminalWelcomeLines() {
+  const liveUrl = `https://${CONTENT.siteName}/`
+  return [
+    'VITE ready — Local: http://localhost:5173/',
+    `LIVE: ${liveUrl}`,
+    'Tip: Cmd/Ctrl+P per Quick Open · Cmd/Ctrl+` per Terminal · Ctrl+L per clear',
+    "Welcome! Type 'help' to see available commands.",
+  ]
+}
+
+function defaultTerminalState(): { entries: TerminalEntry[]; cwd: string; history: string[] } {
+  return {
+    cwd: '~/henrydev.it',
+    history: [],
+    entries: terminalWelcomeLines().map((text) => ({ id: chatId(), kind: 'out', text })),
+  }
+}
+
+function loadTerminalStateFromStorage(): { entries: TerminalEntry[]; cwd: string; history: string[] } {
+  if (typeof window === 'undefined') return defaultTerminalState()
+  try {
+    const raw = window.localStorage.getItem(TERMINAL_STORAGE_KEY)
+    if (!raw) return defaultTerminalState()
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return defaultTerminalState()
+
+    const cwdRaw = (parsed as { cwd?: unknown }).cwd
+    const historyRaw = (parsed as { history?: unknown }).history
+    const entriesRaw = (parsed as { entries?: unknown }).entries
+
+    const cwd = typeof cwdRaw === 'string' && cwdRaw.trim().length ? cwdRaw : '~/henrydev.it'
+
+    const history =
+      Array.isArray(historyRaw)
+        ? historyRaw
+            .map((h) => (typeof h === 'string' ? h : null))
+            .filter((h): h is string => Boolean(h))
+            .slice(-TERMINAL_MAX_SAVED_HISTORY)
+        : []
+
+    const entries =
+      Array.isArray(entriesRaw)
+        ? entriesRaw
+            .map((e) => {
+              if (!e || typeof e !== 'object') return null
+              const id = (e as { id?: unknown }).id
+              const kind = (e as { kind?: unknown }).kind
+              const text = (e as { text?: unknown }).text
+              const cwdEntry = (e as { cwd?: unknown }).cwd
+              if (typeof id !== 'string') return null
+              if (kind !== 'cmd' && kind !== 'out' && kind !== 'err') return null
+              if (typeof text !== 'string') return null
+              return {
+                id,
+                kind,
+                text,
+                ...(typeof cwdEntry === 'string' ? { cwd: cwdEntry } : {}),
+              } satisfies TerminalEntry
+            })
+            .filter((e): e is TerminalEntry => Boolean(e))
+            .slice(-TERMINAL_MAX_SAVED_ENTRIES)
+        : []
+
+    if (entries.length === 0) return { ...defaultTerminalState(), cwd, history }
+    return { entries, cwd, history }
+  } catch {
+    return defaultTerminalState()
+  }
+}
+
+function saveTerminalStateToStorage(state: { entries: TerminalEntry[]; cwd: string; history: string[] }) {
+  if (typeof window === 'undefined') return
+  try {
+    const payload = {
+      version: 1,
+      cwd: state.cwd,
+      history: state.history.slice(-TERMINAL_MAX_SAVED_HISTORY),
+      entries: state.entries.slice(-TERMINAL_MAX_SAVED_ENTRIES),
+    }
+    window.localStorage.setItem(TERMINAL_STORAGE_KEY, JSON.stringify(payload))
   } catch {
     return
   }
@@ -3532,22 +3764,34 @@ function QuickOpen({
   )
 }
 
+function TerminalText({ text }: { text: string }) {
+  const urlRe = /(https?:\/\/[^\s)]+)(\)?)?/g
+  const parts: ReactNode[] = []
+  let last = 0
+  let m: RegExpExecArray | null = null
+  while ((m = urlRe.exec(text))) {
+    const url = m[1] || ''
+    const idx = m.index
+    if (idx > last) parts.push(text.slice(last, idx))
+    parts.push(
+      <a key={`${idx}-${url}`} className="terminal-link" href={url} target="_blank" rel="noreferrer">
+        {url}
+      </a>,
+    )
+    last = idx + url.length
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return <>{parts}</>
+}
+
 function App() {
   const allFiles = FILE_TREE.children
 
   const [activeActivity, setActiveActivity] = useState<ActivityId>('explorer')
-  const [selectedTheme, setSelectedTheme] = useState<
-    | 'Dark (Visual Studio)'
-    | 'Light (Visual Studio)'
-    | 'Dark+ (default dark)'
-    | 'Light+ (default light)'
-    | 'Monokai'
-    | 'Solarized Dark'
-    | 'Solarized Light'
-    | 'Quiet Light'
-    | 'Dark High Contrast'
-    | 'Light High Contrast'
-  >('Dark (Visual Studio)')
+  const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Dark (Visual Studio)')
+  const themeStyle = useMemo(() => THEME_VARS[selectedTheme] as unknown as CSSProperties, [selectedTheme])
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false)
+  const themeMenuRef = useRef<HTMLDivElement | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true
     return !window.matchMedia('(max-width: 900px)').matches
@@ -3585,6 +3829,7 @@ function App() {
   const macbarRef = useRef<HTMLElement | null>(null)
   const [now, setNow] = useState(() => new Date())
   const initialChatState = useMemo(() => loadChatStateFromStorage(), [])
+  const initialTerminalState = useMemo(() => loadTerminalStateFromStorage(), [])
   const [chatThreads, setChatThreads] = useState<ChatThread[]>(initialChatState.threads)
   const [activeChatThreadId, setActiveChatThreadId] = useState<string>(initialChatState.activeThreadId)
   const activeChatThreadIdRef = useRef(activeChatThreadId)
@@ -3593,15 +3838,12 @@ function App() {
   const [chatIsSending, setChatIsSending] = useState(false)
   const [chatError, setChatError] = useState<string | null>(null)
   const chatEndRef = useRef<HTMLDivElement | null>(null)
-  const [terminalEntries, setTerminalEntries] = useState<TerminalEntry[]>(() => [
-    { id: chatId(), kind: 'out', text: 'VITE ready — Local: http://localhost:5173/' },
-    { id: chatId(), kind: 'out', text: 'Tip: Cmd/Ctrl+P per Quick Open · Cmd/Ctrl+` per Terminal' },
-    { id: chatId(), kind: 'out', text: "Welcome! Type 'help' to see available commands." },
-  ])
+  const [terminalEntries, setTerminalEntries] = useState<TerminalEntry[]>(initialTerminalState.entries)
   const terminalEntriesRef = useRef<TerminalEntry[]>([])
+  const fortuneIndexRef = useRef(0)
   const [terminalInput, setTerminalInput] = useState('')
-  const [terminalCwd, setTerminalCwd] = useState('~/henrydev.it')
-  const [terminalHistory, setTerminalHistory] = useState<string[]>([])
+  const [terminalCwd, setTerminalCwd] = useState(initialTerminalState.cwd)
+  const [terminalHistory, setTerminalHistory] = useState<string[]>(initialTerminalState.history)
   const [terminalHistoryIndex, setTerminalHistoryIndex] = useState(-1)
   const terminalInputRef = useRef<HTMLInputElement | null>(null)
   const terminalEndRef = useRef<HTMLDivElement | null>(null)
@@ -3730,6 +3972,10 @@ function App() {
   }, [activeChatThreadId, chatThreads])
 
   useEffect(() => {
+    saveTerminalStateToStorage({ entries: terminalEntries, cwd: terminalCwd, history: terminalHistory })
+  }, [terminalCwd, terminalEntries, terminalHistory])
+
+  useEffect(() => {
     terminalEntriesRef.current = terminalEntries
   }, [terminalEntries])
 
@@ -3839,7 +4085,25 @@ function App() {
 
   const appendTerminal = (kind: TerminalEntryKind, lines: string[]) => {
     if (lines.length === 0) return
-    setTerminalEntries((prev) => [...prev, ...lines.map((t) => ({ id: chatId(), kind, text: t }))])
+    const MAX = 800
+    setTerminalEntries((prev) => {
+      const next = [...prev, ...lines.map((t) => ({ id: chatId(), kind, text: t }) satisfies TerminalEntry)]
+      return next.length > MAX ? next.slice(-MAX) : next
+    })
+  }
+
+  const buildWelcomeEntries = useCallback(() => {
+    return terminalWelcomeLines().map((text) => ({ id: chatId(), kind: 'out', text }) satisfies TerminalEntry)
+  }, [])
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+      await navigator.clipboard.writeText(text)
+      appendTerminal('out', ['Copied to clipboard ✅'])
+    } catch {
+      appendTerminal('err', ['Impossibile copiare in clipboard (permessi/blocco browser).'])
+    }
   }
 
   const resolveFileId = (input: string): FileId | null => {
@@ -3856,7 +4120,11 @@ function App() {
     if (!line) return
 
     const cwdAtStart = terminalCwd
-    setTerminalEntries((prev) => [...prev, { id: chatId(), kind: 'cmd', text: line, cwd: cwdAtStart }])
+    setTerminalEntries((prev) => {
+      const MAX = 800
+      const next = [...prev, { id: chatId(), kind: 'cmd', text: line, cwd: cwdAtStart } satisfies TerminalEntry]
+      return next.length > MAX ? next.slice(-MAX) : next
+    })
     setTerminalHistory((prev) => [...prev, line])
     setTerminalHistoryIndex(-1)
 
@@ -3865,25 +4133,49 @@ function App() {
     const rest = args.slice(1)
 
     if (cmd === 'clear' || cmd === 'cls') {
-      setTerminalEntries([])
+      setTerminalEntries(buildWelcomeEntries())
       return
     }
 
-    if (cmd === 'help') {
+    if (cmd === 'welcome') {
+      appendTerminal('out', terminalWelcomeLines())
+      return
+    }
+
+    if (cmd === 'reset') {
+      setTerminalCwd('~/henrydev.it')
+      setTerminalHistory([])
+      setTerminalHistoryIndex(-1)
+      setTerminalEntries(buildWelcomeEntries())
+      return
+    }
+
+    if (cmd === 'help' || cmd === 'man') {
+      const needle = (rest[0] || '').toLowerCase()
+      if (!needle) {
+        appendTerminal('out', [
+          'Comandi disponibili:',
+          ...TERMINAL_COMMANDS.map((c) => {
+            const names = [c.name, ...(c.aliases || [])].join('|')
+            return `- ${names.padEnd(16, ' ')} ${c.description}`
+          }),
+          '',
+          "Tip: usa TAB per completare · ↑/↓ per history · Ctrl+L per clear",
+        ])
+        return
+      }
+
+      const spec = TERMINAL_COMMANDS.find(
+        (c) => c.name === needle || Boolean(c.aliases?.some((a) => a.toLowerCase() === needle)),
+      )
+      if (!spec) {
+        appendTerminal('err', [`help: comando sconosciuto: ${needle}`])
+        return
+      }
       appendTerminal('out', [
-        'Comandi disponibili:',
-        '- help',
-        '- clear',
-        '- ls | tree',
-        '- open <file> | code <file>',
-        '- cat <file>',
-        '- pwd | cd <path>',
-        '- echo <text>',
-        '- date',
-        '- whoami',
-        '- henryai (apre la chat)',
-        '- npm run dev | npm run build',
-        '- git status',
+        `${spec.name}${spec.aliases?.length ? ` (alias: ${spec.aliases.join(', ')})` : ''}`,
+        `usage: ${spec.usage}`,
+        `desc:  ${spec.description}`,
       ])
       return
     }
@@ -3907,16 +4199,29 @@ function App() {
         setTerminalCwd('~/henrydev.it/src')
         return
       }
+      if (target === 'public') {
+        setTerminalCwd('~/henrydev.it/public')
+        return
+      }
       appendTerminal('err', [`cd: no such file or directory: ${target}`])
       return
     }
 
     if (cmd === 'ls') {
-      const base =
-        terminalCwd.endsWith('/src')
-          ? ['App.tsx', 'App.css', 'index.css', 'main.tsx', 'assets/']
-          : ['src/', 'public/', 'index.html', 'package.json', 'vite.config.ts', 'README.md']
-      appendTerminal('out', base)
+      const arg = rest.find((r) => !r.startsWith('-')) || ''
+      const cwd = terminalCwd
+      const listRoot = ['src/', 'public/', 'index.html', 'package.json', 'vite.config.ts', 'README.md']
+      const listSrc = ['App.tsx', 'App.css', 'index.css', 'main.tsx', 'assets/']
+      const listPublic = ['favicon.svg', 'icons.svg', 'img/']
+
+      const target = arg.trim()
+      if (!target) {
+        appendTerminal('out', cwd.endsWith('/src') ? listSrc : cwd.endsWith('/public') ? listPublic : listRoot)
+        return
+      }
+      if (target === 'src' || target === './src') return void appendTerminal('out', listSrc)
+      if (target === 'public' || target === './public') return void appendTerminal('out', listPublic)
+      appendTerminal('err', [`ls: cannot access '${target}': No such file or directory`])
       return
     }
 
@@ -3982,14 +4287,182 @@ function App() {
       return
     }
 
+    if (cmd === 'history') {
+      const opt = (rest[0] || '').toLowerCase()
+      if (opt === '-c' || opt === 'clear') {
+        setTerminalHistory([])
+        setTerminalHistoryIndex(-1)
+        appendTerminal('out', ['history cleared'])
+        return
+      }
+      const start = Math.max(0, terminalHistory.length - 30)
+      const lines = terminalHistory.slice(start).map((h, i) => `${start + i + 1}\t${h}`)
+      appendTerminal('out', lines.length ? lines : ['(empty)'])
+      return
+    }
+
+    if (cmd === 'themes') {
+      appendTerminal('out', THEME_NAMES.map((t) => (t === selectedTheme ? `* ${t}` : `  ${t}`)))
+      return
+    }
+
+    if (cmd === 'theme') {
+      const arg = rest.join(' ').trim()
+      if (!arg || arg.toLowerCase() === 'list') {
+        appendTerminal('out', ['Temi disponibili:', ...THEME_NAMES.map((t) => (t === selectedTheme ? `* ${t}` : `- ${t}`))])
+        return
+      }
+      const hit = THEME_NAMES.find((t) => t.toLowerCase() === arg.toLowerCase()) ?? THEME_NAMES.find((t) => t.toLowerCase().includes(arg.toLowerCase()))
+      if (!hit) {
+        appendTerminal('err', [`theme: tema non trovato: ${arg}`, "Suggerimento: usa 'theme list'"])
+        return
+      }
+      setSelectedTheme(hit)
+      appendTerminal('out', [`Theme set → ${hit}`])
+      return
+    }
+
+    if (cmd === 'find') {
+      const q = rest.join(' ').trim().toLowerCase()
+      if (!q) {
+        appendTerminal('err', ['usage: find <query>'])
+        return
+      }
+      const hits = allFiles.filter((f) => f.label.toLowerCase().includes(q)).map((f) => f.label)
+      appendTerminal('out', hits.length ? hits : ['(no matches)'])
+      return
+    }
+
+    if (cmd === 'grep') {
+      const pattern = rest[0] || ''
+      const fileArg = rest[1] || ''
+      if (!pattern || !fileArg) {
+        appendTerminal('err', ['usage: grep <pattern> <file>'])
+        return
+      }
+      const id = resolveFileId(fileArg)
+      if (!id) {
+        appendTerminal('err', [`grep: ${fileArg}: No such file`])
+        return
+      }
+      const haystack = terminalPreviewForFile(id)
+      let re: RegExp | null = null
+      try {
+        re = new RegExp(pattern, 'i')
+      } catch {
+        re = null
+      }
+      const hits = haystack
+        .map((line, i) => ({ line, n: i + 1 }))
+        .filter(({ line }) => (re ? re.test(line) : line.toLowerCase().includes(pattern.toLowerCase())))
+        .slice(0, 80)
+        .map(({ line, n }) => `${n}: ${line}`)
+      appendTerminal('out', hits.length ? hits : ['(no matches)'])
+      return
+    }
+
+    if (cmd === 'links') {
+      const lines = [
+        `email: ${CONTENT.contact.email}`,
+        ...CONTENT.contact.links.map((l) => `${l.label}: ${l.href}`),
+        '',
+        'Tip: puoi cliccare i link direttamente dall’output.',
+      ]
+      appendTerminal('out', lines)
+      return
+    }
+
+    if (cmd === 'neofetch') {
+      const profile = CONTENT.profile
+      const lines = [
+        '      _                         _          ',
+        '  ___| |__   ___ _ __ _ __   __| | _____   ',
+        " / __| '_ \\ / _ \\ '__| '_ \\ / _` |/ _ \\ \\  ",
+        "| (__| | | |  __/ |  | | | | (_| |  __/> > ",
+        ' \\___|_| |_|\\___|_|  |_| |_|\\__,_|\\___/_/  ',
+        '',
+        `${profile.firstName} ${profile.lastName} @ ${CONTENT.siteName}`,
+        `role:  ${profile.roles.join(' · ')}`,
+        `stack: ${CONTENT.skills.stack.slice(0, 5).map((s) => s.name).join(' · ')}`,
+        `cwd:   ${terminalCwd}`,
+        `theme: ${selectedTheme}`,
+        '',
+        "Pro tip: prova 'theme solarized' oppure 'find html' 😄",
+      ]
+      appendTerminal('out', lines)
+      return
+    }
+
+    if (cmd === 'fortune') {
+      const fortunes = [
+        'Ship small, ship often.',
+        'Debugging is like being the detective in a crime movie where you are also the murderer.',
+        'If it works, don’t touch it. If it doesn’t, write a test.',
+        'Make it work, make it right, make it fast.',
+        'Premature optimization is the root of (some) evil.',
+      ]
+      const idx = fortuneIndexRef.current % fortunes.length
+      fortuneIndexRef.current = (fortuneIndexRef.current + 1) % fortunes.length
+      appendTerminal('out', [fortunes[idx]!])
+      return
+    }
+
+    if (cmd === 'calc') {
+      const expr = rest.join(' ').trim()
+      if (!expr) {
+        appendTerminal('err', ['usage: calc <expr>'])
+        return
+      }
+      if (!/^[0-9+\-*/().%\s]+$/.test(expr)) {
+        appendTerminal('err', ['calc: espressione non valida (consentiti solo numeri e + - * / % ( ) )'])
+        return
+      }
+      try {
+        const value = Function(`"use strict"; return (${expr});`)() as unknown
+        appendTerminal('out', [String(value)])
+      } catch {
+        appendTerminal('err', ['calc: errore nel calcolo'])
+      }
+      return
+    }
+
+    if (cmd === 'copy') {
+      const arg = rest.join(' ').trim()
+      if (arg === '--all') {
+        const text = terminalEntriesRef.current
+          .filter((e) => e.kind !== 'cmd')
+          .map((e) => e.text)
+          .join('\n')
+        await copyToClipboard(text)
+        return
+      }
+      if (arg) {
+        await copyToClipboard(arg)
+        return
+      }
+      const lastOut = [...terminalEntriesRef.current].reverse().find((e) => e.kind !== 'cmd')?.text || ''
+      if (!lastOut) {
+        appendTerminal('err', ['copy: niente da copiare'])
+        return
+      }
+      await copyToClipboard(lastOut)
+      return
+    }
+
     if (cmd === 'npm' && rest[0] === 'run') {
       const script = rest[1] || ''
       if (script === 'dev') {
-        appendTerminal('out', ['vite v8 — dev server (simulato)', 'VITE ready — Local: http://localhost:5173/'])
+        const liveUrl = `https://${CONTENT.siteName}/`
+        appendTerminal('out', [
+          'vite v8 — dev server (simulato)',
+          'VITE ready — Local: http://localhost:5173/',
+          `LIVE: ${liveUrl}`,
+        ])
         return
       }
       if (script === 'build') {
-        appendTerminal('out', ['tsc -b', 'vite build', '✓ built (simulato)'])
+        const liveUrl = `https://${CONTENT.siteName}/`
+        appendTerminal('out', ['tsc -b', 'vite build', '✓ built (simulato)', `Deployed: ${liveUrl}`])
         return
       }
       appendTerminal('err', [`npm: unknown script "${script}"`])
@@ -4237,8 +4710,20 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isThemeMenuOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      const el = themeMenuRef.current
+      if (!el) return
+      if (!(e.target instanceof Node)) return
+      if (!el.contains(e.target)) setIsThemeMenuOpen(false)
+    }
+    window.addEventListener('pointerdown', onPointerDown)
+    return () => window.removeEventListener('pointerdown', onPointerDown)
+  }, [isThemeMenuOpen])
+
   return (
-    <div className="desktop" ref={desktopRef}>
+    <div className="desktop" ref={desktopRef} style={themeStyle}>
       <header className="macbar" aria-label="Menu bar" ref={macbarRef}>
         <div className="macbar-left">
           <span className="mac-apple" aria-hidden="true">
@@ -4580,7 +5065,7 @@ function App() {
                           className="macmenu-dd-item"
                           role="menuitem"
                           onClick={() => {
-                            setTerminalEntries([])
+                            setTerminalEntries(buildWelcomeEntries())
                             setActiveMacMenu(null)
                           }}
                         >
@@ -5016,20 +5501,7 @@ function App() {
                     <div className="settings-section">
                       <div className="settings-sectiontitle">COLOR THEME</div>
                       <div className="settings-list">
-                        {(
-                          [
-                            'Dark (Visual Studio)',
-                            'Light (Visual Studio)',
-                            'Dark+ (default dark)',
-                            'Light+ (default light)',
-                            'Monokai',
-                            'Solarized Dark',
-                            'Solarized Light',
-                            'Quiet Light',
-                            'Dark High Contrast',
-                            'Light High Contrast',
-                          ] as const
-                        ).map((name) => (
+                        {THEME_NAMES.map((name) => (
                             <button
                               key={name}
                               type="button"
@@ -5422,10 +5894,45 @@ function App() {
         {isTerminalOpen ? (
           <section className="panel" aria-label="Panel">
             <div className="panel-tabs">
-              <div className="panel-tab active">TERMINAL</div>
-              <button type="button" className="panel-close" onClick={() => setIsTerminalOpen(false)}>
-                ×
-              </button>
+              <div className="panel-tabs-left">
+                <div className="panel-tab active">TERMINAL</div>
+                <div className="panel-subtab">zsh · {terminalCwd.replace(/^~\//, '') || '~'}</div>
+              </div>
+              <div className="panel-tabs-right">
+                <button
+                  type="button"
+                  className="iconbtn"
+                  aria-label="Clear terminal"
+                  title="Clear terminal (Ctrl+L)"
+                  onClick={() => setTerminalEntries(buildWelcomeEntries())}
+                >
+                  <Codicon name="trash" />
+                </button>
+                <button
+                  type="button"
+                  className="iconbtn"
+                  aria-label="Copy output"
+                  title="Copy output"
+                  onClick={() => {
+                    const text = terminalEntriesRef.current
+                      .filter((e) => e.kind !== 'cmd')
+                      .map((e) => e.text)
+                      .join('\n')
+                    void copyToClipboard(text)
+                  }}
+                >
+                  <Codicon name="copy" />
+                </button>
+                <button
+                  type="button"
+                  className="iconbtn"
+                  aria-label="Close terminal"
+                  title="Close terminal"
+                  onClick={() => setIsTerminalOpen(false)}
+                >
+                  <Codicon name="close" />
+                </button>
+              </div>
             </div>
             <div
               className="terminal"
@@ -5447,7 +5954,7 @@ function App() {
                 }
                 return (
                   <div key={l.id} className={`terminal-line terminal-${l.kind}`}>
-                    {l.text}
+                    <TerminalText text={l.text} />
                   </div>
                 )
               })}
@@ -5464,6 +5971,22 @@ function App() {
                   spellCheck={false}
                   onChange={(e) => setTerminalInput(e.target.value)}
                   onKeyDown={(e) => {
+                    const isMac = navigator.platform.toLowerCase().includes('mac')
+                    const mod = isMac ? e.metaKey : e.ctrlKey
+
+                    if (mod && (e.key === 'l' || e.key === 'L')) {
+                      e.preventDefault()
+                      setTerminalEntries(buildWelcomeEntries())
+                      return
+                    }
+
+                    if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setTerminalHistoryIndex(-1)
+                      setTerminalInput('')
+                      return
+                    }
+
                     if (e.key === 'Enter') {
                       e.preventDefault()
                       const next = terminalInput
@@ -5501,14 +6024,56 @@ function App() {
 
                     if (e.key === 'Tab') {
                       e.preventDefault()
-                      const m = terminalInput.match(/^(open|code|cat)\s+([^\s]*)$/i)
-                      if (!m) return
-                      const cmd = m[1]
-                      const partial = (m[2] || '').toLowerCase()
+                      const parsed = parseShellArgs(terminalInput)
+                      const rawCmd = (parsed[0] || '').toLowerCase()
+
+                      // Complete command name
+                      if (parsed.length <= 1) {
+                        const prefix = terminalInput.trim().toLowerCase()
+                        if (!prefix) return
+                        const candidates = Array.from(
+                          new Set(TERMINAL_COMMANDS.flatMap((c) => [c.name, ...(c.aliases || [])])),
+                        )
+                        const hits = candidates.filter((c) => c.startsWith(prefix))
+                        if (hits.length === 1) {
+                          setTerminalInput(`${hits[0]} `)
+                          return
+                        }
+                        if (hits.length > 1) {
+                          appendTerminal('out', [hits.slice(0, 30).join('  ')])
+                          return
+                        }
+                        return
+                      }
+
                       const files = allFiles.map((f) => f.label)
-                      const hit = files.find((f) => f.toLowerCase().startsWith(partial))
-                      if (!hit) return
-                      setTerminalInput(`${cmd} ${hit}`)
+
+                      // Complete file arg for open/code/cat
+                      if ((rawCmd === 'open' || rawCmd === 'code' || rawCmd === 'cat') && parsed.length === 2) {
+                        const partial = (parsed[1] || '').toLowerCase()
+                        const hit = files.find((f) => f.toLowerCase().startsWith(partial))
+                        if (!hit) return
+                        setTerminalInput(`${rawCmd} ${hit}`)
+                        return
+                      }
+
+                      // Complete file arg for grep <pattern> <file>
+                      if (rawCmd === 'grep' && parsed.length === 3) {
+                        const partial = (parsed[2] || '').toLowerCase()
+                        const hit = files.find((f) => f.toLowerCase().startsWith(partial))
+                        if (!hit) return
+                        setTerminalInput(`grep ${parsed[1]} ${hit}`)
+                        return
+                      }
+
+                      // Complete dirs for cd
+                      if (rawCmd === 'cd' && parsed.length === 2) {
+                        const partial = (parsed[1] || '').toLowerCase()
+                        const dirs = ['~', '..', 'src', 'public']
+                        const hit = dirs.find((d) => d.toLowerCase().startsWith(partial))
+                        if (!hit) return
+                        setTerminalInput(`cd ${hit}`)
+                      }
                     }
                   }}
                 />
@@ -5542,8 +6107,40 @@ function App() {
             <Codicon name="radio-tower" />
             <span>Go Live</span>
           </div>
-          <div className="status-item status-dropdown status-theme">
-            {selectedTheme} <Codicon name="chevron-down" className="status-dropdown-icon" />
+          <div className="status-theme-wrap" ref={themeMenuRef}>
+            <button
+              type="button"
+              className="status-item status-dropdown status-theme"
+              onClick={() => setIsThemeMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={isThemeMenuOpen}
+              title="Cambia tema"
+            >
+              {selectedTheme} <Codicon name="chevron-down" className="status-dropdown-icon" />
+            </button>
+            {isThemeMenuOpen ? (
+              <div className="status-menu" role="menu" aria-label="Theme menu">
+                {THEME_NAMES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="menuitem"
+                    className={`status-menu-item${t === selectedTheme ? ' is-active' : ''}`}
+                    onClick={() => {
+                      setSelectedTheme(t)
+                      setIsThemeMenuOpen(false)
+                    }}
+                  >
+                    <span className="status-menu-label">{t}</span>
+                    {t === selectedTheme ? (
+                      <span className="status-menu-check" aria-hidden="true">
+                        ✓
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="status-item status-icon status-copilot">
             <Codicon name="copilot" />
