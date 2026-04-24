@@ -14,6 +14,16 @@
   --vscode-blue: #4fc1ff;
   --vscode-pink: #d16d9e;
 
+  /* Motion & UI tokens (VS Code-like) */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --dur-quick: 120ms;
+  --dur-fast: 160ms;
+  --dur-med: 220ms;
+  --focus-ring: 0 0 0 2px rgba(0, 122, 204, 0.35);
+
   --sans: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans,
     sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
@@ -28,6 +38,14 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-quick: 1ms;
+    --dur-fast: 1ms;
+    --dur-med: 1ms;
+  }
 }
 
 html,

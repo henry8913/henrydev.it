@@ -86,11 +86,27 @@
   grid-template-rows: 34px 1fr auto;
   color: var(--vscode-fg);
   font-family: var(--sans);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 22px 72px rgba(0, 0, 0, 0.55);
   flex: 1;
   min-height: 0;
+}
+
+/* Focus ring consistency */
+.title-actionbtn:focus-visible,
+.iconbtn:focus-visible,
+.activity-btn:focus-visible,
+.tab:focus-visible,
+.tree-item:focus-visible,
+.settings-copilotbtn:focus-visible,
+.settings-terminalbtn:focus-visible,
+.chat-send:focus-visible,
+.status-item:focus-visible,
+.panel-tab:focus-visible,
+.panel-close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .macbar {
@@ -216,10 +232,10 @@
   left: 0;
   min-width: 240px;
   padding: 6px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: rgba(28, 28, 28, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(12px);
   z-index: 80;
 }
@@ -303,7 +319,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 10px;
-  background: #2f2f2f;
+  background: var(--vscode-elev-2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   user-select: none;
 }
@@ -334,15 +350,25 @@
   height: 24px;
   display: inline-grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: transparent;
   color: #d4d4d4;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .title-actionbtn:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .title-actionbtn:active {
+    transform: translateY(1px);
+  }
 }
 
 .addressbar {
@@ -357,6 +383,15 @@
   color: #e6e6e6;
   cursor: pointer;
   min-width: 220px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.addressbar:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: rgba(0, 122, 204, 0.6);
 }
 
 .addressbar:hover {
@@ -421,15 +456,25 @@
   height: 24px;
   display: inline-grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: transparent;
   color: #d4d4d4;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .iconbtn:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iconbtn:active {
+    transform: translateY(1px);
+  }
 }
 
 .addressbar .codicon {
@@ -520,7 +565,7 @@
 
 .rightbar {
   width: var(--chatWidth);
-  background: #252526;
+  background: var(--vscode-elev);
   border-left: 1px solid var(--vscode-border);
   min-height: 0;
   display: grid;
@@ -700,6 +745,7 @@
   display: flex;
   gap: 8px;
   align-items: flex-start;
+  animation: msgIn var(--dur-med) var(--ease-out);
 }
 
 .chat-msg.user {
@@ -728,12 +774,27 @@
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .chat-bubble.user {
   background: rgba(247, 109, 85, 0.12);
   border-color: rgba(247, 109, 85, 0.35);
   color: #ffffff;
+}
+
+@keyframes msgIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .chat-typing {
@@ -802,13 +863,18 @@
 }
 
 .chat-send {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid #3b3b3b;
   background: rgba(0, 122, 204, 0.18);
   color: #d4d4d4;
   display: grid;
   place-items: center;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .chat-send:hover {
@@ -823,7 +889,7 @@
 }
 
 .activitybar {
-  background: #333333;
+  background: var(--vscode-elev-2);
   border-right: 1px solid var(--vscode-border);
   display: flex;
   flex-direction: column;
@@ -849,10 +915,20 @@
   place-items: center;
   cursor: pointer;
   position: relative;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .activity-btn:hover {
   color: #ffffff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .activity-btn:active {
+    transform: translateY(1px);
+  }
 }
 
 .activity-btn.active {
@@ -871,7 +947,7 @@
 
 .sidebar {
   width: 100%;
-  background: #252526;
+  background: var(--vscode-elev);
   border-right: 1px solid var(--vscode-border);
   min-height: 0;
   display: flex;
@@ -1106,6 +1182,7 @@
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .section-header:hover {
@@ -1146,6 +1223,7 @@
   cursor: pointer;
   border-radius: 0;
   position: relative;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .tree-item:hover {
@@ -1238,7 +1316,7 @@
 .tabs {
   display: flex;
   align-items: stretch;
-  background: #252526;
+  background: var(--vscode-elev);
   border-bottom: 1px solid var(--vscode-border);
   overflow: auto;
 }
@@ -1255,6 +1333,9 @@
   height: 36px;
   border-right: 1px solid var(--vscode-border);
   position: relative;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .tab:hover {
@@ -1888,11 +1969,15 @@ button.status-item:hover {
 .home {
   padding: 24px 24px 18px;
   max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .about-page {
   padding: 22px 24px 18px;
   max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .about-topline {
@@ -1902,7 +1987,7 @@ button.status-item:hover {
 }
 
 .about-title {
-  font-size: 56px;
+  font-size: clamp(34px, 7vw, 56px);
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 850;
@@ -1926,7 +2011,8 @@ button.status-item:hover {
   margin-top: 14px;
   font-family: var(--mono);
   color: var(--vscode-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .about-grid {
@@ -1938,9 +2024,14 @@ button.status-item:hover {
 
 .about-card {
   border: 1px solid var(--vscode-border);
-  border-radius: 10px;
-  background: #252526;
+  border-radius: var(--radius-md);
+  background: var(--vscode-elev);
   padding: 14px 14px 12px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
 }
 
 .about-card-wide {
@@ -2028,6 +2119,8 @@ button.status-item:hover {
 .skills-page {
   padding: 22px 24px 18px;
   max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .skills-topline {
@@ -2037,7 +2130,7 @@ button.status-item:hover {
 }
 
 .skills-title {
-  font-size: 56px;
+  font-size: clamp(34px, 7vw, 56px);
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 850;
@@ -2048,9 +2141,9 @@ button.status-item:hover {
 .skills-meta {
   margin: 12px 0 0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--vscode-border);
-  background: #252526;
+  background: var(--vscode-elev);
   font-family: var(--mono);
   font-size: 12px;
   color: #d4d4d4;
@@ -2064,11 +2157,22 @@ button.status-item:hover {
   gap: 14px;
 }
 
+@media (max-width: 760px) {
+  .skills-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .skills-card {
   border: 1px solid var(--vscode-border);
-  border-radius: 10px;
-  background: #252526;
+  border-radius: var(--radius-md);
+  background: var(--vscode-elev);
   padding: 14px 14px 12px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
 }
 
 .skills-card-wide {
@@ -2172,6 +2276,8 @@ button.status-item:hover {
 .resume-page {
   padding: 22px 24px 18px;
   max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .resume-topline {
@@ -2181,7 +2287,7 @@ button.status-item:hover {
 }
 
 .resume-title {
-  font-size: 56px;
+  font-size: clamp(34px, 7vw, 56px);
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 850;
@@ -2193,7 +2299,15 @@ button.status-item:hover {
   margin-top: 10px;
   font-family: var(--mono);
   color: var(--vscode-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.resume-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .resume-section {
@@ -2211,45 +2325,28 @@ button.status-item:hover {
 
 .resume-timeline {
   position: relative;
-  padding-left: 18px;
-}
-
-.resume-timeline::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  padding-left: 0;
 }
 
 .resume-item {
   position: relative;
-  padding-left: 14px;
+  padding-left: 0;
 }
 
 .resume-item + .resume-item {
   margin-top: 18px;
 }
 
-.resume-dot {
-  position: absolute;
-  left: -2px;
-  top: 8px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: #1e1e1e;
-  border: 2px solid rgba(79, 193, 255, 0.65);
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
-}
-
 .resume-itembody {
   border: 1px solid var(--vscode-border);
-  border-radius: 10px;
-  background: #252526;
+  border-radius: var(--radius-md);
+  background: var(--vscode-elev);
   padding: 12px 12px 11px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
 }
 
 .resume-period {
@@ -2261,7 +2358,7 @@ button.status-item:hover {
 
 .resume-role {
   font-weight: 850;
-  font-size: 22px;
+  font-size: clamp(18px, 3.8vw, 22px);
   line-height: 1.1;
   color: #ffffff;
   margin-bottom: 6px;
@@ -2304,8 +2401,8 @@ button.status-item:hover {
 
 .resume-bars {
   border: 1px solid var(--vscode-border);
-  border-radius: 10px;
-  background: #252526;
+  border-radius: var(--radius-md);
+  background: var(--vscode-elev);
   padding: 12px;
   display: grid;
   gap: 10px;
@@ -2342,6 +2439,15 @@ button.status-item:hover {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #4fc1ff, #d16d9e, #f76d55);
+  transition: width var(--dur-med) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .resume-itembody:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+    transform: translateY(-1px);
+  }
 }
 
 @media (max-width: 760px) {
@@ -2358,6 +2464,8 @@ button.status-item:hover {
 .portfolio-page {
   padding: 22px 24px 18px;
   max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .portfolio-topline {
@@ -2367,7 +2475,7 @@ button.status-item:hover {
 }
 
 .portfolio-title {
-  font-size: 56px;
+  font-size: clamp(34px, 7vw, 56px);
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 850;
@@ -2379,7 +2487,8 @@ button.status-item:hover {
   margin-top: 10px;
   font-family: var(--mono);
   color: var(--vscode-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .portfolio-controls {
@@ -2396,9 +2505,22 @@ button.status-item:hover {
   font-family: var(--mono);
   font-size: 12px;
   padding: 7px 10px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .vs-button:active,
+  .footer-link:active,
+  .contact-send:active,
+  .portfolio-pill:active {
+    transform: translateY(1px);
+  }
 }
 
 .portfolio-pill:hover {
@@ -2420,14 +2542,43 @@ button.status-item:hover {
   gap: 18px;
 }
 
+@media (max-width: 900px) {
+  .portfolio-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .portfolio-card {
   position: relative;
   border: 1px solid var(--vscode-border);
-  border-radius: 12px;
-  background: #252526;
+  border-radius: var(--radius-lg);
+  background: var(--vscode-elev);
   padding: 14px 14px 12px;
   overflow: hidden;
   min-height: 168px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .about-card:hover,
+  .skills-card:hover,
+  .portfolio-card:hover,
+  .certs-card:hover,
+  .blog-card:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+    transform: translateY(-1px);
+  }
 }
 
 .portfolio-thumb {
@@ -2570,6 +2721,8 @@ button.status-item:hover {
 .certs-page {
   padding: 22px 24px 18px;
   max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .certs-topline {
@@ -2579,7 +2732,7 @@ button.status-item:hover {
 }
 
 .certs-title {
-  font-size: 56px;
+  font-size: clamp(34px, 7vw, 56px);
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 850;
@@ -2591,7 +2744,8 @@ button.status-item:hover {
   margin-top: 10px;
   font-family: var(--mono);
   color: var(--vscode-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .certs-grid {
@@ -2603,9 +2757,14 @@ button.status-item:hover {
 
 .certs-card {
   border: 1px solid var(--vscode-border);
-  border-radius: 12px;
-  background: #252526;
+  border-radius: var(--radius-lg);
+  background: var(--vscode-elev);
   overflow: hidden;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
 }
 
 .certs-thumb {
@@ -2691,6 +2850,8 @@ button.status-item:hover {
 .blog-page {
   padding: 22px 24px 18px;
   max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .blog-topline {
@@ -2700,7 +2861,7 @@ button.status-item:hover {
 }
 
 .blog-title {
-  font-size: 56px;
+  font-size: clamp(34px, 7vw, 56px);
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 850;
@@ -2712,7 +2873,8 @@ button.status-item:hover {
   margin-top: 10px;
   font-family: var(--mono);
   color: var(--vscode-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .blog-grid {
@@ -2724,15 +2886,14 @@ button.status-item:hover {
 
 .blog-card {
   border: 1px solid var(--vscode-border);
-  border-radius: 12px;
-  background: #252526;
+  border-radius: var(--radius-lg);
+  background: var(--vscode-elev);
   overflow: hidden;
-  transition: background 150ms ease, border-color 150ms ease;
-}
-
-.blog-card:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.2);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
 }
 
 .blog-thumb {
@@ -2936,6 +3097,8 @@ button.status-item:hover {
 .contact-page {
   padding: 22px 24px 18px;
   max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .contact-topline {
@@ -2945,7 +3108,7 @@ button.status-item:hover {
 }
 
 .contact-title {
-  font-size: 56px;
+  font-size: clamp(34px, 7vw, 56px);
   line-height: 1;
   letter-spacing: -0.05em;
   font-weight: 850;
@@ -2957,7 +3120,8 @@ button.status-item:hover {
   margin-top: 10px;
   font-family: var(--mono);
   color: var(--vscode-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .contact-grid {
@@ -3084,7 +3248,7 @@ button.status-item:hover {
   border: 1px solid rgba(79, 193, 255, 0.35);
   background: rgba(0, 122, 204, 0.22);
   color: rgba(79, 193, 255, 0.95);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   cursor: pointer;
   font-family: var(--mono);
@@ -3092,6 +3256,10 @@ button.status-item:hover {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .contact-send:hover {
@@ -3126,7 +3294,7 @@ button.status-item:hover {
 
 .home-first,
 .home-last {
-  font-size: 68px;
+  font-size: clamp(40px, 10vw, 72px);
   line-height: 0.95;
   letter-spacing: -0.06em;
   font-weight: 800;
@@ -3271,7 +3439,7 @@ button.status-item:hover {
 }
 
 .vs-button {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid #3b3b3b;
   background: rgba(255, 255, 255, 0.04);
   color: #d4d4d4;
@@ -3281,6 +3449,11 @@ button.status-item:hover {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .btn-icon {
@@ -3345,11 +3518,16 @@ button.status-item:hover {
   font-size: 12px;
   border: 1px solid var(--chip-border, #3b3b3b);
   background: var(--chip-bg, rgba(255, 255, 255, 0.03));
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 6px 10px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .footer-link:hover {

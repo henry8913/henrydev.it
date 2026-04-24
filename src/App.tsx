@@ -281,7 +281,7 @@ const CONTENT = {
     subtitle: 'const projects = [...shipped, ...building]',
     filters: ['All', 'Web Development', 'Applications', 'Web Design'],
     projects: [
-      {
+      /*{
         title: 'E-Core Hyperdrive',
         category: 'Web Development',
         description:
@@ -298,7 +298,7 @@ const CONTENT = {
         cover:
           'https://raw.githubusercontent.com/henry8913/EvergreenResort/refs/heads/main/EvergreenResort.Api/wwwroot/img/GitHub%20-%20Cover.png',
         github: 'https://github.com/henry8913/EvergreenResort',
-      },
+      },*/
       {
         title: 'RMI Made in Italy',
         category: 'Web Development',
@@ -1704,7 +1704,6 @@ function ResumeTimelineSection({
       <div className="resume-timeline" role="list">
         {items.map((it) => (
           <article key={`${it.period}-${it.title}`} className="resume-item" role="listitem">
-            <div className="resume-dot" aria-hidden="true" />
             <div className="resume-itembody">
               <div className="resume-period">{it.period}</div>
               <div className="resume-role">{it.title}</div>
@@ -1730,7 +1729,7 @@ function ResumeTimelineSection({
   )
 }
 
-function ResumeView() {
+function ResumeView({ onOpenPdf }: { onOpenPdf: () => void }) {
   const resume = CONTENT.resume
   const stack = CONTENT.skills.stack
   const { contentRef, lineCount, lineHeightPx, padTopPx, padBottomPx } = useEditorLineNumbers()
@@ -1749,6 +1748,23 @@ function ResumeView() {
         <div className="resume-topline">{resume.metaLine}</div>
         <h1 className="resume-title">{resume.title}</h1>
         <div className="resume-subtitle">{resume.subtitle}</div>
+
+        <div className="resume-actions" aria-label="Resume actions">
+          <button type="button" className="vs-button primary" onClick={onOpenPdf}>
+            <Codicon name="file-pdf" className="btn-icon" />
+            Apri resume.pdf
+          </button>
+          <a className="vs-button" href={`mailto:${CONTENT.contact.email}`}>
+            <Codicon name="mail" className="btn-icon" />
+            Email
+          </a>
+          {CONTENT.contact.links?.[0]?.href ? (
+            <a className="vs-button" href={CONTENT.contact.links[0].href} target="_blank" rel="noreferrer">
+              <Codicon name="link-external" className="btn-icon" />
+              {CONTENT.contact.links[0].label}
+            </a>
+          ) : null}
+        </div>
 
         <ResumeTimelineSection title={resume.experienceTitle} items={resume.experience} />
         <ResumeTimelineSection title={resume.educationTitle} items={resume.education} />
@@ -3817,7 +3833,7 @@ function App() {
     }
 
     if (activeFile.id === 'resume.ts') {
-      return <ResumeView />
+      return <ResumeView onOpenPdf={() => openFile('resume.pdf')} />
     }
 
     if (activeFile.id === 'certifications.js') {
