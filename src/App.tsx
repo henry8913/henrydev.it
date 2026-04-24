@@ -3432,6 +3432,8 @@ function App() {
       if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches && next) {
         // On mobile: keep one overlay at a time (terminal vs chat)
         setIsChatOpen(false)
+        // Also close the sidebar so the activitybar doesn't cover overlays
+        setIsSidebarOpen(false)
       }
       return next
     })
@@ -3443,6 +3445,8 @@ function App() {
       if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches && next) {
         // On mobile: keep one overlay at a time (chat vs terminal)
         setIsTerminalOpen(false)
+        // Also close the sidebar so the activitybar doesn't cover overlays
+        setIsSidebarOpen(false)
       }
       return next
     })
