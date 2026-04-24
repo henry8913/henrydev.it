@@ -3529,6 +3529,29 @@ button.status-item:hover {
     display: none;
   }
 
+  /*
+    iOS Safari zoom fix:
+    iPhone zooms when focusing inputs with font-size < 16px.
+    Keep interactive text fields at >= 16px on mobile to prevent unwanted zoom.
+  */
+  .chat-input,
+  .terminal-input,
+  .quickopen-input,
+  .contact-input,
+  .contact-textarea,
+  .index-textarea {
+    font-size: 16px;
+  }
+
+  /* Reduce double-tap zoom on tappable UI (where supported) */
+  .desktop a,
+  .desktop button,
+  .desktop [role='button'],
+  .desktop input,
+  .desktop textarea {
+    touch-action: manipulation;
+  }
+
   /* Close button only needed on mobile drawer */
   .sidebar-close {
     display: inline-grid;

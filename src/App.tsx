@@ -3336,9 +3336,15 @@ function App() {
     | 'Dark High Contrast'
     | 'Light High Contrast'
   >('Dark (Visual Studio)')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return !window.matchMedia('(max-width: 900px)').matches
+  })
   const [isTerminalOpen, setIsTerminalOpen] = useState(false)
-  const [isChatOpen, setIsChatOpen] = useState(true)
+  const [isChatOpen, setIsChatOpen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return !window.matchMedia('(max-width: 900px)').matches
+  })
   const desktopRef = useRef<HTMLDivElement | null>(null)
   const cursorRef = useRef<HTMLDivElement | null>(null)
   const [isCursorVisible, setIsCursorVisible] = useState(false)
