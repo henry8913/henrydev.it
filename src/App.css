@@ -1163,6 +1163,79 @@
   color: #ffffff;
 }
 
+.settings-link-btn {
+  width: 100%;
+  justify-content: flex-start;
+  cursor: pointer;
+  border: none;
+  font: inherit;
+  text-align: left;
+}
+
+/* -------------------------
+   Profile panel (sidebar)
+   ------------------------- */
+.profile-panel {
+  padding: 10px;
+  display: grid;
+  gap: 14px;
+}
+
+.profile-card {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.profile-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(79, 193, 255, 0.25);
+  background: rgba(0, 122, 204, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.profile-avatar .codicon {
+  font-size: 20px;
+}
+
+.profile-meta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.profile-name {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.profile-roles {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(212, 212, 212, 0.85);
+}
+
+.profile-tagline {
+  font-size: 12px;
+  color: rgba(212, 212, 212, 0.85);
+  line-height: 1.35;
+}
+
+.profile-actions {
+  display: grid;
+  gap: 10px;
+}
+
 .tree-children {
   display: flex;
   flex-direction: column;

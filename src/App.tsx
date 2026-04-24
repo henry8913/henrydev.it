@@ -193,6 +193,31 @@ const THEME_VARS: Record<ThemeName, Record<string, string>> = {
   },
 }
 
+const THEME_STORAGE_KEY = 'henrydev.theme.v1'
+
+function loadThemeFromStorage(): ThemeName {
+  if (typeof window === 'undefined') return 'Dark (Visual Studio)'
+  try {
+    const raw = window.localStorage.getItem(THEME_STORAGE_KEY)
+    if (!raw) return 'Dark (Visual Studio)'
+    const parsed: unknown = JSON.parse(raw)
+    const name = typeof parsed === 'string' ? parsed : parsed && typeof parsed === 'object' ? (parsed as { name?: unknown }).name : null
+    if (typeof name === 'string' && (THEME_NAMES as readonly string[]).includes(name)) return name as ThemeName
+    return 'Dark (Visual Studio)'
+  } catch {
+    return 'Dark (Visual Studio)'
+  }
+}
+
+function saveThemeToStorage(name: ThemeName) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ version: 1, name }))
+  } catch {
+    return
+  }
+}
+
 const FILE_TREE: FolderEntry = {
   id: 'PORTFOLIO',
   label: 'HENRYDEV.IT',
@@ -1521,6 +1546,7 @@ type ActivityId =
   | 'remote'
   | 'github-actions'
   | 'package'
+  | 'profile'
   | 'settings'
 
 const ACTIVITY_TITLES: Record<ActivityId, string> = {
@@ -1532,6 +1558,7 @@ const ACTIVITY_TITLES: Record<ActivityId, string> = {
   remote: 'REMOTE EXPLORER',
   'github-actions': 'GITHUB ACTIONS',
   package: 'CONTAINERS',
+  profile: 'PROFILE',
   settings: 'SETTINGS',
 }
 
@@ -3788,7 +3815,7 @@ function App() {
   const allFiles = FILE_TREE.children
 
   const [activeActivity, setActiveActivity] = useState<ActivityId>('explorer')
-  const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Dark (Visual Studio)')
+  const [selectedTheme, setSelectedTheme] = useState<ThemeName>(() => loadThemeFromStorage())
   const themeStyle = useMemo(() => THEME_VARS[selectedTheme] as unknown as CSSProperties, [selectedTheme])
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false)
   const themeMenuRef = useRef<HTMLDivElement | null>(null)
@@ -3970,6 +3997,10 @@ function App() {
   useEffect(() => {
     saveChatStateToStorage(chatThreads, activeChatThreadId)
   }, [activeChatThreadId, chatThreads])
+
+  useEffect(() => {
+    saveThemeToStorage(selectedTheme)
+  }, [selectedTheme])
 
   useEffect(() => {
     saveTerminalStateToStorage({ entries: terminalEntries, cwd: terminalCwd, history: terminalHistory })
@@ -5406,7 +5437,13 @@ function App() {
             ))}
           </div>
           <div className="activity-bottom">
-            <button type="button" className="activity-btn" aria-label="Accounts" title="Accounts">
+            <button
+              type="button"
+              className="activity-btn"
+              aria-label="Profile"
+              title="Profile"
+              onClick={() => openSidebarFromActivity('profile')}
+            >
               <Codicon name="account" />
             </button>
             <button
@@ -5564,7 +5601,130 @@ function App() {
                   </div>
                 ) : null}
 
-                {activeActivity !== 'settings' ? (
+                {activeActivity === 'profile' ? (
+                  <div className="profile-panel">
+                    <div className="profile-card">
+                      <div className="profile-avatar" aria-hidden="true">
+                        <Codicon name="account" />
+                      </div>
+                      <div className="profile-meta">
+                        <div className="profile-name">
+                          {CONTENT.profile.firstName} {CONTENT.profile.lastName}
+                        </div>
+                        <div className="profile-roles">{CONTENT.profile.roles.join(' · ')}</div>
+                        <div className="profile-tagline">{CONTENT.profile.tagline}</div>
+                      </div>
+                    </div>
+
+                    <div className="profile-actions">
+                      <button
+                        type="button"
+                        className="settings-copilotbtn"
+                        onClick={() => {
+                          setIsChatOpen(true)
+                          if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
+                            setIsTerminalOpen(false)
+                          }
+                          closeSidebarOnMobile()
+                        }}
+                      >
+                        <span className="settings-copilotbtn-left">
+                          <span className="settings-copilot-spark" aria-hidden="true">
+                            ✦
+                          </span>
+                          <span>Open HenryAI&apos;s Copilot</span>
+                        </span>
+                        <span className="settings-copilotbtn-right">
+                          <span className="settings-chip">AI</span>
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="settings-terminalbtn"
+                        onClick={() => {
+                          setIsTerminalOpen(true)
+                          if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
+                            setIsChatOpen(false)
+                          }
+                          closeSidebarOnMobile()
+                        }}
+                      >
+                        <span className="settings-terminalbtn-left">
+                          <span className="settings-terminal-icon" aria-hidden="true">
+                            <Codicon name="terminal" />
+                          </span>
+                          <span>Open Terminal</span>
+                        </span>
+                        <span className="settings-terminalbtn-right">
+                          <span className="settings-chip settings-chip-terminal">TERM</span>
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="settings-section">
+                      <div className="settings-sectiontitle">QUICK LINKS</div>
+                      <div className="settings-list">
+                        <button
+                          type="button"
+                          className="settings-link settings-link-btn"
+                          onClick={() => {
+                            openFile('about.html')
+                            closeSidebarOnMobile()
+                          }}
+                        >
+                          About
+                        </button>
+                        <button
+                          type="button"
+                          className="settings-link settings-link-btn"
+                          onClick={() => {
+                            openFile('portfolio.js')
+                            closeSidebarOnMobile()
+                          }}
+                        >
+                          Portfolio
+                        </button>
+                        <button
+                          type="button"
+                          className="settings-link settings-link-btn"
+                          onClick={() => {
+                            openFile('resume.pdf')
+                            closeSidebarOnMobile()
+                          }}
+                        >
+                          Resume (PDF)
+                        </button>
+                        <button
+                          type="button"
+                          className="settings-link settings-link-btn"
+                          onClick={() => {
+                            openFile('contact.css')
+                            closeSidebarOnMobile()
+                          }}
+                        >
+                          Contact
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="settings-section">
+                      <div className="settings-sectiontitle">CONTACT</div>
+                      <div className="settings-list">
+                        <a className="settings-link" href={`mailto:${CONTENT.contact.email}`}>
+                          Email
+                        </a>
+                        {CONTENT.contact.links.map((l) => (
+                          <a key={l.href} className="settings-link" href={l.href} target="_blank" rel="noreferrer">
+                            {l.label}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeActivity !== 'settings' && activeActivity !== 'profile' ? (
                   <>
                     <button type="button" className="section-header" onClick={() => setIsOpenEditorsOpen((v) => !v)}>
                   <span className="section-caret" aria-hidden="true">
@@ -6142,9 +6302,15 @@ function App() {
               </div>
             ) : null}
           </div>
-          <div className="status-item status-icon status-copilot">
+          <button
+            type="button"
+            className="status-item status-icon status-copilot"
+            aria-label="Apri HenryAI Copilot"
+            title="Apri HenryAI Copilot"
+            onClick={toggleChat}
+          >
             <Codicon name="copilot" />
-          </div>
+          </button>
           <div className="status-item status-icon status-bell">
             <Codicon name="bell" />
           </div>

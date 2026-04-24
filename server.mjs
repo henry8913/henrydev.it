@@ -9,6 +9,8 @@ const __dirname = path.dirname(__filename)
 
 const distDir = path.join(__dirname, 'dist')
 const port = Number.parseInt(process.env.PORT || '3000', 10)
+const CANONICAL_HOST = 'henrydev.it'
+const CANONICAL_ORIGIN = `https://${CANONICAL_HOST}`
 
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -28,6 +30,47 @@ const contentTypes = {
   '.ttf': 'font/ttf',
   '.mp4': 'video/mp4',
   '.webm': 'video/webm',
+}
+
+function headerValue(v) {
+  if (Array.isArray(v)) return v[0] || ''
+  return typeof v === 'string' ? v : ''
+}
+
+function firstForwardedValue(v) {
+  return String(v || '')
+    .split(',')[0]
+    .trim()
+}
+
+function getRequestHost(req) {
+  const xfHost = headerValue(req.headers['x-forwarded-host'])
+  const host = xfHost ? firstForwardedValue(xfHost) : headerValue(req.headers.host)
+  return String(host || '').trim()
+}
+
+function getRequestProto(req) {
+  const xfProto = headerValue(req.headers['x-forwarded-proto'])
+  const proto = xfProto ? firstForwardedValue(xfProto) : ''
+  return (proto || 'http').trim()
+}
+
+function maybeRedirectToCanonical(req, res) {
+  const host = getRequestHost(req).toLowerCase()
+  if (!host) return false
+  if (host !== CANONICAL_HOST && host !== `www.${CANONICAL_HOST}`) return false
+
+  const proto = getRequestProto(req).toLowerCase()
+  const needsHttps = proto !== 'https'
+  const needsNoWww = host !== CANONICAL_HOST
+
+  if (!needsHttps && !needsNoWww) return false
+
+  const url = req.url || '/'
+  res.statusCode = 308
+  res.setHeader('Location', `${CANONICAL_ORIGIN}${url}`)
+  res.end()
+  return true
 }
 
 function safeJoin(root, urlPath) {
@@ -55,6 +98,8 @@ async function serveIndex(res) {
 
 const server = http.createServer(async (req, res) => {
   try {
+    if (maybeRedirectToCanonical(req, res)) return
+
     const method = req.method || 'GET'
     const url = req.url || '/'
     const pathname = url.split('?')[0] || '/'
