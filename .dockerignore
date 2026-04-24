@@ -1,0 +1,10 @@
+.git
+.github
+node_modules
+dist
+npm-debug.log
+*.log
+.DS_Store
+.env
+README.md
+Website Coming Soon.html

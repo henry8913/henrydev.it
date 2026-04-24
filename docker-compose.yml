@@ -1,0 +1,16 @@
+services:
+  henrydev:
+    container_name: henrydev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - npm_default
+
+networks:
+  npm_default:
+    external: true
+    name: npm_default
