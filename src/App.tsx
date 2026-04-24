@@ -2630,7 +2630,7 @@ function PdfView() {
   )
 }
 
-type HtmlCompletionKind = 'tag' | 'attr'
+type HtmlCompletionKind = 'tag' | 'close' | 'attr' | 'css' | 'snippet'
 type HtmlCompletionItem = {
   label: string
   kind: HtmlCompletionKind
@@ -2640,6 +2640,49 @@ type HtmlCompletionItem = {
 
 function escapeHtml(input: string) {
   return input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+function unclosedHtmlTags(source: string) {
+  const voidTags = new Set([
+    'area',
+    'base',
+    'br',
+    'col',
+    'embed',
+    'hr',
+    'img',
+    'input',
+    'link',
+    'meta',
+    'param',
+    'source',
+    'track',
+    'wbr',
+  ])
+  const stack: string[] = []
+  const tagRe = /<\/?([A-Za-z][A-Za-z0-9:-]*)\b[^>]*?>/g
+  let m: RegExpExecArray | null
+  while ((m = tagRe.exec(source))) {
+    const full = m[0]
+    const name = m[1].toLowerCase()
+    const isClosing = full.startsWith('</')
+    const isSelfClosing = full.endsWith('/>') || voidTags.has(name)
+    if (isSelfClosing) continue
+    if (isClosing) {
+      const idx = stack.lastIndexOf(name)
+      if (idx !== -1) stack.splice(idx, 1)
+      continue
+    }
+    stack.push(name)
+  }
+  return stack
+}
+
+function isInsideTagPair(source: string, tag: string, cursor: number) {
+  const before = source.slice(0, cursor).toLowerCase()
+  const lastOpen = before.lastIndexOf(`<${tag}`)
+  const lastClose = before.lastIndexOf(`</${tag}`)
+  return lastOpen !== -1 && lastOpen > lastClose
 }
 
 function highlightHtmlToHtml(code: string) {
@@ -2852,6 +2895,7 @@ function IndexHtmlView() {
 
   const [mode, setMode] = useState<'code' | 'preview'>('code')
   const [previewKey, setPreviewKey] = useState(0)
+  const [previewDoc, setPreviewDoc] = useState(() => value)
 
   const highlighted = useMemo(() => highlightHtmlToHtml(value), [value])
   const lineCount = useMemo(() => Math.max(1, value.split('\n').length), [value])
@@ -2861,6 +2905,17 @@ function IndexHtmlView() {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(storageKey, value)
   }, [storageKey, value])
+
+  // Preview: reload the iframe (debounced) so CSS/JS changes are applied reliably.
+  // (Some browsers don't consistently re-run <script> when srcDoc changes.)
+  useEffect(() => {
+    if (mode !== 'preview') return
+    const t = window.setTimeout(() => {
+      setPreviewDoc(value)
+      setPreviewKey((k) => k + 1)
+    }, 350)
+    return () => window.clearTimeout(t)
+  }, [mode, value])
 
   useEffect(() => {
     const el = measureRef.current
@@ -2908,12 +2963,65 @@ function IndexHtmlView() {
     if (!textarea) return { items: [] as HtmlCompletionItem[], replace: null as { start: number; end: number } | null }
     const cursor = textarea.selectionStart
 
+    // CSS completions inside <style>...</style>
+    if (isInsideTagPair(nextValue, 'style', cursor) && !isInsideTagPair(nextValue, 'script', cursor)) {
+      const before = nextValue.slice(0, cursor)
+      const word = before.match(/[A-Za-z-]+$/)?.[0] ?? ''
+      const replace = { start: cursor - word.length, end: cursor }
+      const props = [
+        'background',
+        'background-color',
+        'color',
+        'display',
+        'flex',
+        'flex-direction',
+        'justify-content',
+        'align-items',
+        'gap',
+        'margin',
+        'margin-top',
+        'margin-bottom',
+        'padding',
+        'padding-top',
+        'padding-bottom',
+        'width',
+        'height',
+        'max-width',
+        'min-height',
+        'border',
+        'border-radius',
+        'box-shadow',
+        'font-size',
+        'font-weight',
+        'line-height',
+      ]
+      const items = props
+        .filter((p) => p.startsWith(word.toLowerCase()))
+        .slice(0, 12)
+        .map((p) => ({ label: p, kind: 'css' as const, insertText: `${p}: `, cursorDelta: `${p}: `.length }))
+      return { items, replace }
+    }
+
     const before = nextValue.slice(0, cursor)
     const lt = before.lastIndexOf('<')
     const gt = before.lastIndexOf('>')
     if (lt === -1 || lt < gt) return { items: [], replace: null }
 
     const inTag = before.slice(lt + 1)
+
+    // Closing tag suggestions: </div>
+    if (inTag.startsWith('/')) {
+      const prefix = inTag.slice(1).replace(/[^A-Za-z0-9:-]/g, '')
+      const replace = { start: cursor - prefix.length, end: cursor }
+      const stack = unclosedHtmlTags(before)
+      const candidates = [...new Set(stack.reverse())]
+      const items = candidates
+        .filter((t) => t.startsWith(prefix.toLowerCase()))
+        .slice(0, 10)
+        .map((t) => ({ label: t, kind: 'close' as const, insertText: t, cursorDelta: t.length }))
+      return { items, replace }
+    }
+
     if (inTag.startsWith('!') || inTag.startsWith('?') || inTag.startsWith('/')) return { items: [], replace: null }
 
     const hasSpace = /\s/.test(inTag)
@@ -2922,30 +3030,32 @@ function IndexHtmlView() {
     const replace = { start: cursor - prefix.length, end: cursor }
 
     const tagList = [
-      'a',
-      'article',
+      // snippets / structural
+      'html',
+      'head',
       'body',
+      'main',
+      'section',
+      'article',
+      'header',
+      'footer',
+      'nav',
+      // text
+      'a',
       'button',
       'div',
-      'footer',
       'form',
       'h1',
       'h2',
       'h3',
-      'head',
-      'header',
-      'html',
       'img',
       'input',
       'label',
       'li',
       'link',
-      'main',
       'meta',
-      'nav',
       'p',
       'script',
-      'section',
       'span',
       'style',
       'title',
@@ -3025,6 +3135,88 @@ function IndexHtmlView() {
   }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isMac = typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac')
+    const mod = isMac ? e.metaKey : e.ctrlKey
+
+    // Cmd/Ctrl+S -> format document (VS Code-like)
+    if (mod && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault()
+      const textarea = textareaRef.current
+      if (!textarea) return
+      const cursor = textarea.selectionStart
+      const next = formatHtml(value)
+      setValue(next)
+      closeSuggest()
+      requestAnimationFrame(() => {
+        textarea.focus()
+        textarea.setSelectionRange(Math.min(cursor, next.length), Math.min(cursor, next.length))
+        syncScroll()
+      })
+      return
+    }
+
+    // Auto-close tags on ">" (basic)
+    if (e.key === '>' && !suggestOpen) {
+      e.preventDefault()
+      const textarea = textareaRef.current
+      if (!textarea) return
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const before = value.slice(0, start)
+      const after = value.slice(end)
+      const insert = '>'
+      const nextBase = `${before}${insert}${after}`
+
+      // If we just closed an opening tag like "<div>", insert "</div>" and place cursor between.
+      const lt = before.lastIndexOf('<')
+      const gt = before.lastIndexOf('>')
+      if (lt > gt) {
+        const inner = before.slice(lt + 1)
+        const tagName = inner.split(/\s+/)[0].replace(/[^A-Za-z0-9:-]/g, '').toLowerCase()
+        const voidTags = new Set([
+          'area',
+          'base',
+          'br',
+          'col',
+          'embed',
+          'hr',
+          'img',
+          'input',
+          'link',
+          'meta',
+          'param',
+          'source',
+          'track',
+          'wbr',
+        ])
+        const isClosing = inner.startsWith('/')
+        const isSelfClosing = inner.trim().endsWith('/') || voidTags.has(tagName)
+        if (tagName && !isClosing && !isSelfClosing) {
+          const closing = `</${tagName}>`
+          const next = `${before}${insert}${closing}${after}`
+          setValue(next)
+          closeSuggest()
+          requestAnimationFrame(() => {
+            textarea.focus()
+            const pos = start + insert.length
+            textarea.setSelectionRange(pos, pos)
+            syncScroll()
+          })
+          return
+        }
+      }
+
+      setValue(nextBase)
+      closeSuggest()
+      requestAnimationFrame(() => {
+        textarea.focus()
+        const pos = start + insert.length
+        textarea.setSelectionRange(pos, pos)
+        syncScroll()
+      })
+      return
+    }
+
     // Editor-like behavior: Tab inserts spaces instead of moving focus
     if (e.key === 'Tab' && !suggestOpen) {
       e.preventDefault()
@@ -3143,7 +3335,10 @@ function IndexHtmlView() {
             className="iconbtn"
             aria-label="Refresh preview"
             title="Refresh preview"
-            onClick={() => setPreviewKey((k) => k + 1)}
+            onClick={() => {
+              setPreviewDoc(value)
+              setPreviewKey((k) => k + 1)
+            }}
           >
             <Codicon name="refresh" />
           </button>
@@ -3156,9 +3351,10 @@ function IndexHtmlView() {
             key={previewKey}
             className="index-preview-frame"
             title="index.html preview"
-            // allow links to open in a new tab from srcDoc (target=_blank)
-            sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
-            srcDoc={value}
+            // Allow HTML/CSS/JS to run like a real page while still isolating it from the app.
+            // (No allow-same-origin, so it can't reach parent window.)
+            sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+            srcDoc={previewDoc}
           />
         </div>
       ) : (
@@ -3208,7 +3404,7 @@ function IndexHtmlView() {
                       applyCompletion(it)
                     }}
                   >
-                    <span className="index-suggest-kind">{it.kind}</span>
+                <span className="index-suggest-kind">{it.kind === 'close' ? 'tag' : it.kind}</span>
                     <span className="index-suggest-label">{it.label}</span>
                   </button>
                 ))}

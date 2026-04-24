@@ -1439,6 +1439,7 @@
   grid-template-rows: auto 1fr;
   overflow: hidden;
   --editorLineHeight: 20px;
+  --indexFontSize: 14px;
   min-height: 0;
 }
 
@@ -1524,9 +1525,11 @@
   top: -9999px;
   left: -9999px;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--indexFontSize);
   line-height: var(--editorLineHeight, 20px);
   white-space: pre;
+  letter-spacing: 0;
+  font-variant-ligatures: none;
 }
 
 .index-highlight {
@@ -1535,13 +1538,15 @@
   margin: 0;
   padding: 14px 16px 20px;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--indexFontSize);
   line-height: var(--editorLineHeight, 20px);
   white-space: pre;
   overflow: auto;
   pointer-events: none;
   color: #d4d4d4;
   tab-size: 2;
+  letter-spacing: 0;
+  font-variant-ligatures: none;
 }
 
 .index-textarea {
@@ -1556,11 +1561,13 @@
   color: transparent;
   caret-color: #d4d4d4;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--indexFontSize);
   line-height: var(--editorLineHeight, 20px);
   white-space: pre;
   overflow: auto;
   tab-size: 2;
+  letter-spacing: 0;
+  font-variant-ligatures: none;
 }
 
 @media (max-width: 600px) {
@@ -3716,9 +3723,13 @@ button.status-item:hover {
   .terminal-input,
   .quickopen-input,
   .contact-input,
-  .contact-textarea,
-  .index-textarea {
+  .contact-textarea {
     font-size: 16px;
+  }
+
+  /* Keep index.html editor overlay perfectly aligned (highlight + caret) */
+  .editor-scroll.index-editor {
+    --indexFontSize: 16px;
   }
 
   /* Reduce double-tap zoom on tappable UI (where supported) */
